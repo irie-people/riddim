@@ -654,14 +654,15 @@ func (c *checker) methodCall(e *syntax.MethodCallExpr, want Type) Type {
 			cands = append(cands, n)
 		}
 		msg := fmt.Sprintf("%s has no method `%s`", typeName, name)
-		if isLater(typeName, name) {
-			msg = fmt.Sprintf("`%s` on %s is not supported in this version", name, typeName)
-		} else if alias, ok := methodAliases[name]; ok && table[alias] != nil {
+		if alias, ok := methodAliases[name]; ok && table[alias] != nil {
 			msg += "; did you mean `" + alias + "`?"
 		} else if close := closest(name, cands); len(close) > 0 {
 			msg += "; did you mean " + orList(close) + "?"
 		}
 		c.errorf("R0304", e.Name.Span(), "%s", msg)
+		return fail()
+	}
+	if b.elem != "" && !c.elemOK(e, b.elem, recvArgs[0]) {
 		return fail()
 	}
 	own := make([]Type, b.own)
@@ -674,6 +675,49 @@ func (c *checker) methodCall(e *syntax.MethodCallExpr, want Type) Type {
 		c.warnf("W0002", e.Name.Span(), "%s", b.warn)
 	}
 	return c.callWith("`"+name+"`", e.Span(), e.Args, params, result, want)
+}
+
+// elemOK checks what a list method needs of the list's elements: == for
+// contains and index_of, an order for sort, min and max, numbers for sum,
+// Strings for join.
+func (c *checker) elemOK(e *syntax.MethodCallExpr, need string, elem Type) bool {
+	t := Resolve(elem)
+	if _, ok := t.(*Var); ok || isInvalid(t) {
+		return true
+	}
+	name := e.Name.Name
+	switch need {
+	case "comparable":
+		if comparable(t, nil) {
+			return true
+		}
+		d := c.errorf("R0305", e.Name.Span(), "`%s` compares elements with ==, which does not work on %s", name, Deep(t))
+		d.Notes = append(d.Notes, "test each element with a function instead, using `any` or `find`")
+	case "ordered":
+		if t == Int || t == Float || t == String {
+			return true
+		}
+		c.errorf("R0304", e.Name.Span(), "`%s` works on lists of Int, Float or String, not List<%s>", name, Deep(t))
+	case "number":
+		if t == Int || t == Float {
+			return true
+		}
+		d := c.errorf("R0304", e.Name.Span(), "`%s` works on lists of Int or Float, not List<%s>", name, Deep(t))
+		if t == String {
+			d.Notes = append(d.Notes, "join Strings with `join(sep)`")
+		}
+	case "string":
+		if t == String {
+			return true
+		}
+		d := c.errorf("R0304", e.Name.Span(), "`%s` works on List<String>, not List<%s>", name, Deep(t))
+		if t == Int || t == Float || t == Bool || t == Byte {
+			end := e.Recv.Span().End
+			d.Fixes = append(d.Fixes, diag.Fix{Title: "turn the elements into Strings first",
+				Edits: []diag.Edit{c.fset.Edit(syntax.Span{Start: end, End: end}, ".map(|x| x.to_string())")}})
+		}
+	}
+	return false
 }
 
 // methodAliases are names other languages use for built-in methods.

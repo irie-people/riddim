@@ -1,0 +1,5 @@
+fn main(sys: Sys) {
+    let s = "héllo"
+    sys.out.println(s.slice(0, 1))
+    sys.out.println(s.slice(0, 2))
+}

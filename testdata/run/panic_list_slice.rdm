@@ -1,0 +1,5 @@
+fn main(sys: Sys) {
+    let xs = [1, 2, 3].push(4).push(5)
+    sys.out.println(xs.slice(3, 5).len().to_string())
+    sys.out.println(xs.slice(3, 6).len().to_string())
+}

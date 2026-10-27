@@ -7,6 +7,7 @@ type builtin struct {
 	key  string
 	own  int    // the method's own type parameters
 	warn string // W0002 message for unwrap and expect
+	elem string // what a list method needs of its elements: comparable, ordered, number or string
 	sig  func(r, o []Type) ([]Type, Type)
 }
 
@@ -25,6 +26,28 @@ var listMethods = map[string]*builtin{
 	"fold": {key: "list.fold", own: 1, sig: func(r, o []Type) ([]Type, Type) {
 		return []Type{o[0], &Func{[]Type{o[0], r[0]}, o[0]}}, o[0]
 	}},
+	"is_empty": {key: "list.is_empty", sig: func(r, o []Type) ([]Type, Type) { return nil, Bool }},
+	"first":    {key: "list.first", sig: func(r, o []Type) ([]Type, Type) { return nil, &Option{r[0]} }},
+	"last":     {key: "list.last", sig: func(r, o []Type) ([]Type, Type) { return nil, &Option{r[0]} }},
+	"set":      {key: "list.set", sig: func(r, o []Type) ([]Type, Type) { return []Type{Int, r[0]}, &List{r[0]} }},
+	"concat":   {key: "list.concat", sig: func(r, o []Type) ([]Type, Type) { return []Type{&List{r[0]}}, &List{r[0]} }},
+	"slice":    {key: "list.slice", sig: func(r, o []Type) ([]Type, Type) { return []Type{Int, Int}, &List{r[0]} }},
+	"reverse":  {key: "list.reverse", sig: func(r, o []Type) ([]Type, Type) { return nil, &List{r[0]} }},
+	"any":      {key: "list.any", sig: func(r, o []Type) ([]Type, Type) { return []Type{fn1(r[0], Bool)}, Bool }},
+	"all":      {key: "list.all", sig: func(r, o []Type) ([]Type, Type) { return []Type{fn1(r[0], Bool)}, Bool }},
+	"find":     {key: "list.find", sig: func(r, o []Type) ([]Type, Type) { return []Type{fn1(r[0], Bool)}, &Option{r[0]} }},
+	"enumerate": {key: "list.enumerate", sig: func(r, o []Type) ([]Type, Type) {
+		return nil, &List{&Tuple{[]Type{Int, r[0]}}}
+	}},
+	"contains": {key: "list.contains", elem: "comparable", sig: func(r, o []Type) ([]Type, Type) { return []Type{r[0]}, Bool }},
+	"index_of": {key: "list.index_of", elem: "comparable", sig: func(r, o []Type) ([]Type, Type) {
+		return []Type{r[0]}, &Option{Int}
+	}},
+	"sort": {key: "list.sort", elem: "ordered", sig: func(r, o []Type) ([]Type, Type) { return nil, &List{r[0]} }},
+	"min":  {key: "list.min", elem: "ordered", sig: func(r, o []Type) ([]Type, Type) { return nil, &Option{r[0]} }},
+	"max":  {key: "list.max", elem: "ordered", sig: func(r, o []Type) ([]Type, Type) { return nil, &Option{r[0]} }},
+	"sum":  {key: "list.sum", elem: "number", sig: func(r, o []Type) ([]Type, Type) { return nil, r[0] }},
+	"join": {key: "list.join", elem: "string", sig: func(r, o []Type) ([]Type, Type) { return []Type{String}, String }},
 }
 
 var mapMethods = map[string]*builtin{
@@ -93,14 +116,53 @@ func toString(key string) map[string]*builtin {
 	return map[string]*builtin{"to_string": {key: key, sig: func(r, o []Type) ([]Type, Type) { return nil, String }}}
 }
 
+// simple returns a method of a primitive type with the given parameter and
+// result types.
+func simple(key string, result Type, params ...Type) *builtin {
+	return &builtin{key: key, sig: func(r, o []Type) ([]Type, Type) { return params, result }}
+}
+
+// with adds methods to a method table.
+func with(m map[string]*builtin, more map[string]*builtin) map[string]*builtin {
+	for k, v := range more {
+		m[k] = v
+	}
+	return m
+}
+
 var basicMethods = map[*Basic]map[string]*builtin{
-	Int:   toString("int.to_string"),
-	Float: toString("float.to_string"),
-	Bool:  toString("bool.to_string"),
-	Byte:  toString("byte.to_string"),
+	Int: with(toString("int.to_string"), map[string]*builtin{
+		"abs": simple("int.abs", Int),
+		"min": simple("int.min", Int, Int),
+		"max": simple("int.max", Int, Int),
+	}),
+	Float: with(toString("float.to_string"), map[string]*builtin{
+		"abs":   simple("float.abs", Float),
+		"floor": simple("float.floor", Float),
+		"ceil":  simple("float.ceil", Float),
+		"round": simple("float.round", Float),
+		"sqrt":  simple("float.sqrt", Float),
+	}),
+	Bool: toString("bool.to_string"),
+	Byte: toString("byte.to_string"),
 	String: {
-		"to_string": {key: "string.to_string", sig: func(r, o []Type) ([]Type, Type) { return nil, String }},
-		"parse_int": {key: "string.parse_int", sig: func(r, o []Type) ([]Type, Type) { return nil, &Result{Int, ErrorT} }},
+		"to_string":   simple("string.to_string", String),
+		"parse_int":   simple("string.parse_int", &Result{Int, ErrorT}),
+		"parse_float": simple("string.parse_float", &Result{Float, ErrorT}),
+		"len":         simple("string.len", Int),
+		"is_empty":    simple("string.is_empty", Bool),
+		"contains":    simple("string.contains", Bool, String),
+		"starts_with": simple("string.starts_with", Bool, String),
+		"ends_with":   simple("string.ends_with", Bool, String),
+		"find":        simple("string.find", &Option{Int}, String),
+		"split":       simple("string.split", &List{String}, String),
+		"lines":       simple("string.lines", &List{String}),
+		"trim":        simple("string.trim", String),
+		"to_upper":    simple("string.to_upper", String),
+		"to_lower":    simple("string.to_lower", String),
+		"replace":     simple("string.replace", String, String, String),
+		"repeat":      simple("string.repeat", String, Int),
+		"slice":       simple("string.slice", String, Int, Int),
 	},
 	ErrorT: errorMethods,
 }
@@ -108,17 +170,6 @@ var basicMethods = map[*Basic]map[string]*builtin{
 var outMethods = map[string]*builtin{
 	"print":   {key: "out.print", sig: func(r, o []Type) ([]Type, Type) { return []Type{String}, Unit }},
 	"println": {key: "out.println", sig: func(r, o []Type) ([]Type, Type) { return []Type{String}, Unit }},
-}
-
-// laterMethods are the §4.9 methods that come after this version, so that
-// using one gets a clear message.
-var laterMethods = map[string][]string{
-	"String": {"len", "is_empty", "contains", "starts_with", "ends_with", "find", "split", "lines", "trim",
-		"to_upper", "to_lower", "replace", "repeat", "slice", "parse_float"},
-	"Int":   {"abs", "min", "max"},
-	"Float": {"abs", "floor", "ceil", "round", "sqrt"},
-	"List": {"is_empty", "first", "last", "set", "concat", "slice", "reverse", "any", "all", "find",
-		"enumerate", "contains", "index_of", "sort", "min", "max", "sum", "join"},
 }
 
 // methodsOf returns the built-in methods of t, the receiver's type arguments
@@ -146,13 +197,4 @@ func methodsOf(t Type) (map[string]*builtin, []Type, string) {
 		return nil, nil, "a function"
 	}
 	return nil, nil, t.String()
-}
-
-func isLater(typeName, method string) bool {
-	for _, m := range laterMethods[typeName] {
-		if m == method {
-			return true
-		}
-	}
-	return false
 }

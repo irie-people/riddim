@@ -1,0 +1,38 @@
+// String methods (DESIGN §4.9).
+
+fn main(sys: Sys) {
+    let s = "  Hello, World  "
+    let t = s.trim()
+    sys.out.println("[${t}] ${s.len()} ${t.len()} ${"é".len()}")
+    sys.out.println("${"".is_empty()} ${t.is_empty()}")
+    sys.out.println("${t.contains("World")} ${t.contains("world")} ${t.starts_with("Hell")} ${t.ends_with("!")}")
+    sys.out.println(t.find("o").map(|i| i.to_string()).unwrap_or("none") + " " + t.find("z").map(|i| i.to_string()).unwrap_or("none"))
+    let parts = "a,b,,c".split(",")
+    sys.out.println("${parts.len()}: " + parts.join("|"))
+    sys.out.println("${"abc".split("").len()} ${"".split(",").len()} ${"x".split(",").len()}")
+    let text = "one\ntwo\r\nthree\n"
+    let ls = text.lines()
+    sys.out.println("${ls.len()} " + ls.join("+"))
+    sys.out.println("${"".lines().len()} ${"a\n\nb".lines().len()} ${"last".lines().len()}")
+    sys.out.println(t.to_upper() + " " + t.to_lower())
+    sys.out.println("a-b-c".replace("-", "+") + " " + "aaa".replace("a", "bb") + " " + "ab".replace("", "."))
+    sys.out.println("ab".repeat(3) + "|" + "x".repeat(0) + "|")
+    sys.out.println(t.slice(0, 5) + "|" + t.slice(7, 12) + "|" + t.slice(3, 3) + "|")
+    sys.out.println("héllo".slice(0, 3) + " " + "héllo".slice(3, 6))
+    match "3.25".parse_float() {
+        Ok(f) => sys.out.println((f * 2.0).to_string()),
+        Err(e) => sys.out.println(e.message()),
+    }
+    for input in ["1e3", "-0.5", "x1.5", "1e400", "Inf", "", " 2"] {
+        match input.parse_float() {
+            Ok(f) => sys.out.println("ok ${f}"),
+            Err(e) => sys.out.println(e.message()),
+        }
+    }
+    let csv = "name=alice;age=30"
+    for field in csv.split(";") {
+        if let Some(i) = field.find("=") {
+            sys.out.println(field.slice(0, i) + " -> " + field.slice(i + 1, field.len()))
+        }
+    }
+}

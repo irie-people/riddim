@@ -997,6 +997,43 @@ func (f *fn) builtin(mu *check.MethodUse, recv value, args []value) value {
 		return call("listFilter")
 	case "list.fold":
 		return call("listFold")
+	case "list.is_empty":
+		return value{s: "len(" + recv.s + ") == 0", op: true}
+	case "list.first":
+		return call("listFirst")
+	case "list.last":
+		return call("listLast")
+	case "list.set":
+		return call("listSet")
+	case "list.concat":
+		return call("listConcat")
+	case "list.slice":
+		return call("listSlice")
+	case "list.reverse":
+		return call("listReverse")
+	case "list.any":
+		return call("listAny")
+	case "list.all":
+		return call("listAll")
+	case "list.find":
+		return call("listFind")
+	case "list.enumerate":
+		f.helper("listEnumerate")
+		return call("listEnumerate")
+	case "list.contains":
+		return call("listContains")
+	case "list.index_of":
+		return call("listIndexOf")
+	case "list.sort":
+		return call("listSort")
+	case "list.min":
+		return call("listMin")
+	case "list.max":
+		return call("listMax")
+	case "list.sum":
+		return call("listSum")
+	case "list.join":
+		return f.pkgCall("strings", "Join", recv, args)
 	case "map.len":
 		return value{s: "len(" + r + ".keys)"}
 	case "map.is_empty":
@@ -1074,11 +1111,64 @@ func (f *fn) builtin(mu *check.MethodUse, recv value, args []value) value {
 		return recv
 	case "string.parse_int":
 		return value{s: "parseInt(" + recv.s + ")"}
+	case "string.parse_float":
+		return value{s: "parseFloat(" + recv.s + ")"}
+	case "string.len":
+		return value{s: "len(" + recv.s + ")"}
+	case "string.is_empty":
+		return value{s: r + ` == ""`, op: true}
+	case "string.contains":
+		return f.pkgCall("strings", "Contains", recv, args)
+	case "string.starts_with":
+		return f.pkgCall("strings", "HasPrefix", recv, args)
+	case "string.ends_with":
+		return f.pkgCall("strings", "HasSuffix", recv, args)
+	case "string.find":
+		return call("stringFind")
+	case "string.split":
+		return f.pkgCall("strings", "Split", recv, args)
+	case "string.lines":
+		return call("stringLines")
+	case "string.trim":
+		return f.pkgCall("strings", "TrimSpace", recv, args)
+	case "string.to_upper":
+		return f.pkgCall("strings", "ToUpper", recv, args)
+	case "string.to_lower":
+		return f.pkgCall("strings", "ToLower", recv, args)
+	case "string.replace":
+		return f.pkgCall("strings", "ReplaceAll", recv, args)
+	case "string.repeat":
+		return f.pkgCall("strings", "Repeat", recv, args)
+	case "string.slice":
+		return call("stringSlice")
+	case "int.abs":
+		return call("intAbs")
+	case "int.min":
+		return value{s: "min(" + joinVals(append([]value{recv}, args...)) + ")"}
+	case "int.max":
+		return value{s: "max(" + joinVals(append([]value{recv}, args...)) + ")"}
+	case "float.abs":
+		return f.pkgCall("math", "Abs", recv, args)
+	case "float.floor":
+		return f.pkgCall("math", "Floor", recv, args)
+	case "float.ceil":
+		return f.pkgCall("math", "Ceil", recv, args)
+	case "float.round":
+		return f.pkgCall("math", "Round", recv, args)
+	case "float.sqrt":
+		return f.pkgCall("math", "Sqrt", recv, args)
 	case "out.print", "out.println":
 		f.printf("%s.%s(%s)\n", r, strings.TrimPrefix(mu.Builtin, "out."), joinVals(args))
 		return value{s: "struct{}{}", stable: true}
 	}
 	return value{s: "nil"}
+}
+
+// pkgCall lowers a built-in method to a call of a Go standard library
+// function that takes the receiver first.
+func (f *fn) pkgCall(pkg, name string, recv value, args []value) value {
+	f.imports[pkg] = true
+	return value{s: pkg + "." + name + "(" + joinVals(append([]value{recv}, args...)) + ")"}
 }
 
 func (f *fn) try(x *syntax.TryExpr) value {

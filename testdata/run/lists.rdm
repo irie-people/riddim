@@ -1,0 +1,47 @@
+// List methods (DESIGN §4.9).
+
+struct Point {
+    x: Int,
+    y: Int,
+}
+
+enum Color { Red, Green, Blue }
+
+fn show(xs: List<Int>) -> String {
+    "[" + xs.map(|x| x.to_string()).join(", ") + "]"
+}
+
+fn main(sys: Sys) {
+    let xs = [3, 1, 4, 1, 5, 9, 2, 6]
+    let empty: List<Int> = []
+    sys.out.println("${xs.is_empty()} ${empty.is_empty()}")
+    sys.out.println("${xs.first().unwrap_or(-1)} ${xs.last().unwrap_or(-1)} ${empty.first().is_none()} ${empty.last().is_none()}")
+    sys.out.println(show(xs.set(0, 30)) + " " + show(xs))
+    sys.out.println(show(xs.concat([7, 7])) + " " + show(empty.concat(empty)))
+    sys.out.println(show(xs.slice(2, 5)) + " " + show(xs.slice(0, 0)) + " " + show(xs.slice(8, 8)))
+    sys.out.println(show(xs.reverse()) + " " + show(xs))
+    sys.out.println("${xs.any(|x| x > 8)} ${xs.all(|x| x > 0)} ${empty.any(|x| x > 0)} ${empty.all(|x| x > 0)}")
+    sys.out.println("${xs.find(|x| x > 4).unwrap_or(0)} ${xs.find(|x| x > 100).is_none()}")
+    for (i, x) in xs.slice(0, 3).enumerate() {
+        sys.out.println("${i}: ${x}")
+    }
+    sys.out.println("${xs.contains(9)} ${xs.contains(8)} ${xs.index_of(1).unwrap_or(-1)} ${xs.index_of(8).is_none()}")
+    sys.out.println(show(xs.sort()) + " " + show(xs))
+    sys.out.println("${xs.min().unwrap_or(0)} ${xs.max().unwrap_or(0)} ${empty.min().is_none()} ${xs.sum()} ${empty.sum()}")
+    let fs = [2.5, -1.0, 0.5]
+    sys.out.println("${fs.sum()} ${fs.min().unwrap_or(0.0)} ${fs.max().unwrap_or(0.0)} " + fs.sort().map(|f| f.to_string()).join(" "))
+    let words = ["pear", "apple", "fig"]
+    sys.out.println(words.sort().join(",") + " " + words.min().unwrap_or("") + " " + words.max().unwrap_or("") + " " + words.join(""))
+    let points = [Point { x: 1, y: 2 }, Point { x: 3, y: 4 }]
+    sys.out.println("${points.contains(Point { x: 3, y: 4 })} ${points.index_of(Point { x: 1, y: 2 }).unwrap_or(-1)}")
+    let colors = [Color::Red, Color::Blue]
+    sys.out.println("${colors.contains(Color::Blue)} ${colors.contains(Color::Green)}")
+    let pairs = [(1, "a"), (2, "b")]
+    sys.out.println("${pairs.contains((2, "b"))}")
+    let nested = [[1, 2], [3]]
+    sys.out.println("${nested.map(|l| l.sum()).sum()} ${nested.last().map(|l| l.len()).unwrap_or(0)}")
+    let opts = [Some(1), None]
+    sys.out.println("${opts.contains(None)} ${opts.index_of(Some(1)).unwrap_or(-1)}")
+    let grown = [1, 2, 3].push(4).push(5)
+    sys.out.println(show(grown.slice(1, 5)) + " " + show(grown.slice(1, 3).push(10)) + " " + show(grown))
+}

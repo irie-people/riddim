@@ -8,12 +8,15 @@
 package main
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"math"
 	"os"
 	"slices"
 	"strconv"
+	"strings"
+	"unicode/utf8"
 )
 
 // Option is Riddim's Option<T>: Some(value) when some is set, else None.
@@ -84,6 +87,153 @@ func listFold[T, U any](xs []T, acc U, f func(U, T) U) U {
 		acc = f(acc, x)
 	}
 	return acc
+}
+
+func listFirst[T any](xs []T) Option[T] { return listGet(xs, 0) }
+
+func listLast[T any](xs []T) Option[T] { return listGet(xs, len(xs)-1) }
+
+// listSet is List.set: a copy with element i replaced. It panics out of
+// range, as xs[i] does.
+func listSet[T any](xs []T, i int, x T) []T {
+	out := slices.Clone(xs)
+	out[i] = x
+	return out
+}
+
+func listConcat[T any](xs, ys []T) []T {
+	return append(xs[:len(xs):len(xs)], ys...)
+}
+
+// listSlice is List.slice: the elements from start up to, not including,
+// end. It checks the bounds against the length: a list's capacity may be
+// larger.
+func listSlice[T any](xs []T, start, end int) []T {
+	if start < 0 || end < start || end > len(xs) {
+		panic(fmt.Sprintf("slice(%d, %d) is out of range for a list of length %d", start, end, len(xs)))
+	}
+	return xs[start:end:end]
+}
+
+func listReverse[T any](xs []T) []T {
+	out := slices.Clone(xs)
+	slices.Reverse(out)
+	return out
+}
+
+func listAny[T any](xs []T, f func(T) bool) bool {
+	for _, x := range xs {
+		if f(x) {
+			return true
+		}
+	}
+	return false
+}
+
+func listAll[T any](xs []T, f func(T) bool) bool {
+	for _, x := range xs {
+		if !f(x) {
+			return false
+		}
+	}
+	return true
+}
+
+func listFind[T any](xs []T, f func(T) bool) Option[T] {
+	for _, x := range xs {
+		if f(x) {
+			return Some(x)
+		}
+	}
+	return None[T]()
+}
+
+func listContains[T comparable](xs []T, x T) bool { return slices.Contains(xs, x) }
+
+func listIndexOf[T comparable](xs []T, x T) Option[int] {
+	if i := slices.Index(xs, x); i >= 0 {
+		return Some(i)
+	}
+	return None[int]()
+}
+
+// listSort is List.sort: a sorted copy, with any NaN first.
+func listSort[T cmp.Ordered](xs []T) []T {
+	out := slices.Clone(xs)
+	slices.Sort(out)
+	return out
+}
+
+// listMin is List.min. Like Go's min, it gives NaN if a Float is NaN.
+func listMin[T cmp.Ordered](xs []T) Option[T] {
+	if len(xs) == 0 {
+		return None[T]()
+	}
+	m := xs[0]
+	for _, x := range xs[1:] {
+		m = min(m, x)
+	}
+	return Some(m)
+}
+
+func listMax[T cmp.Ordered](xs []T) Option[T] {
+	if len(xs) == 0 {
+		return None[T]()
+	}
+	m := xs[0]
+	for _, x := range xs[1:] {
+		m = max(m, x)
+	}
+	return Some(m)
+}
+
+func listSum[T int | float64](xs []T) T {
+	var sum T
+	for _, x := range xs {
+		sum += x
+	}
+	return sum
+}
+
+// intAbs is Int.abs. It wraps for the smallest Int, whose negation does not
+// fit.
+func intAbs(n int) int {
+	if n < 0 {
+		return -n
+	}
+	return n
+}
+
+func stringFind(s, sub string) Option[int] {
+	if i := strings.Index(s, sub); i >= 0 {
+		return Some(i)
+	}
+	return None[int]()
+}
+
+// stringLines is String.lines: the lines without their "\n" or "\r\n". A
+// final line ending does not add an empty line.
+func stringLines(s string) []string {
+	lines := strings.Split(s, "\n")
+	if lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
+	for i, l := range lines {
+		lines[i] = strings.TrimSuffix(l, "\r")
+	}
+	return lines
+}
+
+// stringSlice is String.slice: the bytes from start up to, not including,
+// end. It panics out of range and off a character boundary.
+func stringSlice(s string, start, end int) string {
+	if start < 0 || end < start || end > len(s) {
+		panic(fmt.Sprintf("slice(%d, %d) is out of range for a string of %d bytes", start, end, len(s)))
+	}
+	if start < len(s) && !utf8.RuneStart(s[start]) || end < len(s) && !utf8.RuneStart(s[end]) {
+		panic(fmt.Sprintf("slice(%d, %d) is not on a character boundary", start, end))
+	}
+	return s[start:end]
 }
 
 // Map is Riddim's Map<K, V>: immutable, iterated in insertion order. keys
@@ -277,6 +427,19 @@ func floatToByte(f float64) byte {
 		return 255
 	}
 	return byte(f)
+}
+
+// parseFloat is String.parse_float, as Go's strconv.ParseFloat: it also
+// reads "Inf" and "NaN".
+func parseFloat(s string) Result[float64, error] {
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		if errors.Is(err, strconv.ErrRange) {
+			return Err[float64](fmt.Errorf("cannot parse %q as Float: out of range", s))
+		}
+		return Err[float64](fmt.Errorf("cannot parse %q as Float", s))
+	}
+	return Ok[float64, error](f)
 }
 
 // Out is the Out capability: a stream to print to.
