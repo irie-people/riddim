@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/riddim-hq/riddim/internal/check"
 	"github.com/riddim-hq/riddim/internal/syntax"
@@ -356,9 +357,17 @@ func fieldName(f *check.Field) string {
 
 // doc writes a /// comment as a Go comment, above the //line directive of
 // its declaration so that Go reads it as the declaration's doc comment. A
-// space after // keeps a line such as `///line x` from becoming a directive.
+// space after // keeps a line such as `///line x` from becoming a directive,
+// and characters Go does not allow in source, such as NUL or invalid UTF-8,
+// become U+FFFD.
 func (e *emitter) doc(lines []string) {
 	for _, l := range lines {
+		l = strings.Map(func(r rune) rune {
+			if r < ' ' && r != '\t' || r == 0x7f || r == 0xfeff {
+				return utf8.RuneError
+			}
+			return r
+		}, strings.ToValidUTF8(l, string(utf8.RuneError)))
 		if l = strings.TrimPrefix(l, " "); l == "" {
 			e.printf("//\n")
 		} else {
