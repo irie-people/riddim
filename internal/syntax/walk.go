@@ -36,6 +36,10 @@ func Inspect(n Node, f func(Node) bool) {
 		each(n.X, n.Index)
 	case *TryExpr:
 		each(n.X)
+	case *InterpLit:
+		for _, x := range n.Exprs {
+			each(x)
+		}
 	case *UnaryExpr:
 		each(n.X)
 	case *AsExpr:

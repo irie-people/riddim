@@ -571,6 +571,8 @@ func (f *fn) expr(x syntax.Expr) value {
 		return value{s: x.Text, stable: true}
 	case *syntax.StringLit:
 		return value{s: strconv.Quote(x.Value), stable: true}
+	case *syntax.InterpLit:
+		return f.interp(x)
 	case *syntax.BoolLit:
 		return value{s: strconv.FormatBool(x.Value), stable: true}
 	case *syntax.UnitLit:
@@ -654,6 +656,54 @@ func (f *fn) expr(x syntax.Expr) value {
 		return value{never: true}
 	}
 	return value{s: "struct{}{}"}
+}
+
+// interp lowers "a ${x} b" to a concatenation, "a " + strconv.Itoa(x) + " b",
+// evaluating the interpolated expressions in order.
+func (f *fn) interp(x *syntax.InterpLit) value {
+	vals, never := f.list(x.Exprs)
+	if never {
+		return value{never: true}
+	}
+	var pieces []string
+	stable, op := true, false
+	for i, part := range x.Parts {
+		if part != "" {
+			pieces = append(pieces, strconv.Quote(part))
+		}
+		if i < len(vals) {
+			pieces = append(pieces, f.text(vals[i], f.typeOf(x.Exprs[i])))
+			stable = stable && vals[i].stable
+			op = vals[i].op && check.Resolve(f.typeOf(x.Exprs[i])) == check.String
+		}
+	}
+	switch len(pieces) {
+	case 0:
+		return value{s: `""`, stable: true}
+	case 1:
+		return value{s: pieces[0], stable: stable, op: op}
+	}
+	return value{s: strings.Join(pieces, " + "), stable: stable, op: true}
+}
+
+// text converts a value of type Int, Float, Bool, Byte or String to a
+// String, as its to_string method does.
+func (f *fn) text(v value, t check.Type) string {
+	conv := ""
+	switch check.Resolve(t) {
+	case check.Int:
+		conv = "strconv.Itoa(" + v.s + ")"
+	case check.Float:
+		conv = "strconv.FormatFloat(" + v.s + ", 'g', -1, 64)"
+	case check.Bool:
+		conv = "strconv.FormatBool(" + v.s + ")"
+	case check.Byte:
+		conv = "strconv.Itoa(int(" + v.s + "))"
+	default:
+		return v.s
+	}
+	f.imports["strconv"] = true
+	return conv
 }
 
 // intLit writes an integer literal of type Int, Float or Byte.

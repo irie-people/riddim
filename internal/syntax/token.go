@@ -13,6 +13,9 @@ const (
 	INT
 	FLOAT
 	STRING
+	STRHEAD // a string's text up to its first `${`: "a ${
+	STRMID  // text between two interpolations: } b ${
+	STRTAIL // text after the last interpolation: } c"
 
 	keywordsStart
 	FN
@@ -112,7 +115,7 @@ func (k Kind) String() string {
 		return "identifier"
 	case INT, FLOAT:
 		return "number"
-	case STRING:
+	case STRING, STRHEAD, STRMID, STRTAIL:
 		return "string"
 	}
 	if s, ok := kindText[k]; ok {
@@ -150,8 +153,10 @@ func (t Token) describe() string {
 		return "`" + t.Text + "`"
 	case INT, FLOAT:
 		return "number `" + t.Text + "`"
-	case STRING:
+	case STRING, STRHEAD:
 		return "a string"
+	case STRMID, STRTAIL:
+		return "`}`"
 	}
 	return "`" + t.Kind.String() + "`"
 }
@@ -160,7 +165,7 @@ func (t Token) describe() string {
 // there (DESIGN §4.1).
 func canEnd(k Kind) bool {
 	switch k {
-	case IDENT, INT, FLOAT, STRING, RPAREN, RBRACK, RBRACE, QUESTION,
+	case IDENT, INT, FLOAT, STRING, STRTAIL, RPAREN, RBRACK, RBRACE, QUESTION,
 		RETURN, BREAK, CONTINUE, SELF, SELFTYPE, TRUE, FALSE:
 		return true
 	}

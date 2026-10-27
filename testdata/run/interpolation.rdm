@@ -1,0 +1,51 @@
+// String interpolation: "${expr}" with an Int, Float, Bool, Byte or String.
+
+struct Point {
+    x: Int,
+    y: Int,
+}
+
+impl Point {
+    fn show(self) -> String {
+        "(${self.x}, ${self.y})"
+    }
+}
+
+fn greet(name: String, times: Int) -> String {
+    "hello, ${name} x${times}"
+}
+
+fn main(sys: Sys) {
+    let n = 42
+    let name = "alice"
+    let b: Byte = 7
+    sys.out.println("hello, ${name}: ${n}")
+    sys.out.println("${n}")
+    sys.out.println("${name}")
+    sys.out.println("sum ${n + 1} float ${1.5 * 2.0} bool ${n > 40} byte ${b}")
+    sys.out.println("nested ${"inner ${name}"} done")
+    sys.out.println("point ${Point { x: 1, y: 2 }.show()}")
+    sys.out.println("list ${[1, 2, 3].len()} items")
+    sys.out.println("dollar \${not} \$ $ alone ${"$"}")
+    sys.out.println("braces { } ${ { let k = 3; k * 2 } }")
+    sys.out.println("${if n > 0 { "pos" } else { "neg" }}")
+    sys.out.println("empty parts: ${""}${""}|")
+    let parts = ["a", "b"]
+    sys.out.println("joined ${parts.fold("", |acc, s| acc + s)}")
+    let f = 0.1 + 0.2
+    sys.out.println("float ${f} ${f * 0.0}")
+    sys.out.println("unicode ${"é"}\u{1F600}")
+    sys.out.println("id ${n}" + "!")
+    let mut count = 1
+    let label = |s: String| "${s} #${count}"
+    count = 2
+    sys.out.println(label("first") + " " + "${count}")
+    let words = [1, 2, 3].map(|k| "<${k}>")
+    sys.out.println(words.fold("", |acc, w| "${acc}${w}"))
+    let r: Result<Int, Error> = Err(error("bad"))
+    let text = match r {
+        Ok(v) => "ok ${v}",
+        Err(e) => "err ${e.message()}",
+    }
+    sys.out.println(text)
+}

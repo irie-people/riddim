@@ -212,6 +212,13 @@ type (
 		Start, End Pos
 		Value      string
 	}
+	// InterpLit is a string with interpolations, "a ${x} b": Parts are the
+	// decoded text around the expressions, one more than Exprs.
+	InterpLit struct {
+		Start, End Pos
+		Parts      []string
+		Exprs      []Expr
+	}
 	// BoolLit is true or false.
 	BoolLit struct {
 		ValuePos Pos
@@ -381,6 +388,7 @@ type ClosureParam struct {
 func (x *IntLit) Span() Span         { return Span{x.ValuePos, x.ValuePos + Pos(len(x.Text))} }
 func (x *FloatLit) Span() Span       { return Span{x.ValuePos, x.ValuePos + Pos(len(x.Text))} }
 func (x *StringLit) Span() Span      { return Span{x.Start, x.End} }
+func (x *InterpLit) Span() Span      { return Span{x.Start, x.End} }
 func (x *BoolLit) Span() Span        { return Span{x.ValuePos, x.ValuePos + Pos(len(boolText(x.Value)))} }
 func (x *UnitLit) Span() Span        { return Span{x.Lparen, x.Rparen + 1} }
 func (x *PathExpr) Span() Span       { return Span{x.Type.NamePos, x.Name.Span().End} }
@@ -429,6 +437,7 @@ func boolText(b bool) string {
 func (*IntLit) exprNode()         {}
 func (*FloatLit) exprNode()       {}
 func (*StringLit) exprNode()      {}
+func (*InterpLit) exprNode()      {}
 func (*BoolLit) exprNode()        {}
 func (*UnitLit) exprNode()        {}
 func (*Ident) exprNode()          {}

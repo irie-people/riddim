@@ -1,0 +1,15 @@
+struct Point {
+    x: Int,
+}
+
+fn main() {
+    let p = Point { x: 1 }
+    let xs = [1, 2]
+    let e = error("boom")
+    let a = "p = ${p}"
+    let b = "xs = ${xs}"
+    let c = "e = ${e}"
+    let _ = a
+    let _ = b
+    let _ = c
+}

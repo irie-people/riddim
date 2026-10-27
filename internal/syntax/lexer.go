@@ -19,13 +19,21 @@ func Lex(fs *FileSet, src *Source) ([]Token, []diag.Diagnostic) {
 }
 
 type lexer struct {
-	fs    *FileSet
-	src   *Source
-	b     []byte
-	off   int
-	nl    bool
-	toks  []Token
-	diags []diag.Diagnostic
+	fs     *FileSet
+	src    *Source
+	b      []byte
+	off    int
+	nl     bool
+	toks   []Token
+	diags  []diag.Diagnostic
+	interp []interpFrame // the `${` open around lx.off, innermost last
+}
+
+// An interpFrame is an open `${` in a string: depth counts the `{` opened
+// inside it and not yet closed, quote is the offset of its string's `"`.
+type interpFrame struct {
+	depth int
+	quote int
 }
 
 func (lx *lexer) errorf(code string, start, end int, format string, args ...any) {
@@ -44,11 +52,30 @@ func (lx *lexer) run() {
 	for {
 		lx.skipSpace()
 		if lx.off >= len(lx.b) {
+			if len(lx.interp) > 0 {
+				lx.unterminated(lx.interp[0].quote)
+			}
 			lx.emit(EOF, lx.off, "")
 			return
 		}
 		start := lx.off
 		c := lx.b[lx.off]
+		if n := len(lx.interp); n > 0 {
+			// Inside `${...}`: the `}` that matches the `${` resumes the string.
+			top := &lx.interp[n-1]
+			switch {
+			case c == '{':
+				top.depth++
+			case c == '}' && top.depth > 0:
+				top.depth--
+			case c == '}':
+				quote := top.quote
+				lx.interp = lx.interp[:n-1]
+				lx.off++
+				lx.stringPart(start, quote, false)
+				continue
+			}
+		}
 		switch {
 		case c == '_' || c < utf8.RuneSelf && unicode.IsLetter(rune(c)):
 			lx.ident(start)
@@ -79,6 +106,9 @@ func (lx *lexer) skipSpace() {
 	for lx.off < len(lx.b) {
 		switch c := lx.b[lx.off]; {
 		case c == '\n':
+			if len(lx.interp) > 0 {
+				lx.unterminated(lx.interp[0].quote)
+			}
 			lx.nl = true
 			lx.off++
 		case c == ' ' || c == '\t' || c == '\r':
@@ -203,33 +233,43 @@ func validNumber(text string) bool {
 	return true
 }
 
-// string lexes "..." with escapes \n \t \r \\ \" \$ \u{...}. Interpolation,
-// ${...}, is not part of this version.
+// string lexes "..." with escapes \n \t \r \\ \" \$ \u{...}. A string with
+// interpolations, "a ${x} b", becomes STRHEAD, the tokens of x, and STRTAIL;
+// with more interpolations, STRMID tokens come between them.
 func (lx *lexer) string(start int) {
 	lx.off++
+	lx.stringPart(start, start, true)
+}
+
+// stringPart lexes string text from lx.off to the closing quote or the next
+// `${`. The first part of a string (head) starts at its quote; a later part
+// starts at the `}` that ended an interpolation. quote is the offset of the
+// string's opening quote.
+func (lx *lexer) stringPart(start, quote int, head bool) {
 	var sb strings.Builder
+	end, open := STRTAIL, STRMID
+	if head {
+		end, open = STRING, STRHEAD
+	}
 	for {
 		if lx.off >= len(lx.b) || lx.b[lx.off] == '\n' {
-			lx.errorf("R0102", start, lx.off, "unterminated string")
-			d := &lx.diags[len(lx.diags)-1]
-			d.Notes = append(d.Notes, "strings end on the line they start; write \\n for a newline")
-			lx.emit(STRING, start, sb.String())
+			lx.unterminated(quote)
+			lx.emit(end, start, sb.String())
 			return
 		}
 		c := lx.b[lx.off]
 		switch {
 		case c == '"':
 			lx.off++
-			lx.emit(STRING, start, sb.String())
+			lx.emit(end, start, sb.String())
 			return
 		case c == '\\':
 			lx.escape(&sb)
 		case c == '$' && lx.peek(1) == '{':
-			lx.errorf("R0106", lx.off, lx.off+2, "string interpolation `${...}` is not supported in this version")
-			d := &lx.diags[len(lx.diags)-1]
-			d.Notes = append(d.Notes, "join strings with +: \"total: \" + n.to_string(); write \\$ for a literal $")
-			sb.WriteByte('$')
-			lx.off++
+			lx.off += 2
+			lx.emit(open, start, sb.String())
+			lx.interp = append(lx.interp, interpFrame{quote: quote})
+			return
 		default:
 			r, size := utf8.DecodeRune(lx.b[lx.off:])
 			if r == utf8.RuneError && size == 1 {
@@ -239,6 +279,15 @@ func (lx *lexer) string(start int) {
 			lx.off += size
 		}
 	}
+}
+
+// unterminated reports a string that does not end on its line. Any open
+// interpolations end with it.
+func (lx *lexer) unterminated(quote int) {
+	lx.errorf("R0102", quote, lx.off, "unterminated string")
+	d := &lx.diags[len(lx.diags)-1]
+	d.Notes = append(d.Notes, "strings end on the line they start; write \\n for a newline")
+	lx.interp = nil
 }
 
 func (lx *lexer) escape(sb *strings.Builder) {

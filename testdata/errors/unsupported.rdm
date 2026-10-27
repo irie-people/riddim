@@ -1,5 +1,7 @@
+fn read(fs: Fs) -> String {
+    "nothing"
+}
+
 fn main() {
-    let n = 1
-    let s = "n = ${n}"
-    let _ = s
+    let _ = read
 }

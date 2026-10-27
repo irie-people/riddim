@@ -64,6 +64,11 @@ func (c *checker) expr0(e syntax.Expr, want Type) Type {
 	case *syntax.StringLit:
 		c.consts[e] = &Const{Str: e.Value}
 		return String
+	case *syntax.InterpLit:
+		for _, x := range e.Exprs {
+			c.interpolated(x)
+		}
+		return String
 	case *syntax.BoolLit:
 		c.consts[e] = &Const{Bool: e.Value}
 		return Bool
@@ -925,6 +930,36 @@ func (c *checker) arith(e *syntax.BinaryExpr, op string, lt, rt Type) Type {
 	}
 	c.foldBinary(e, l)
 	return l
+}
+
+// interpolated checks an expression in "${...}": it must be an Int, Float,
+// Bool, Byte or String (DESIGN §4.5).
+func (c *checker) interpolated(x syntax.Expr) {
+	t := c.expr(x, nil)
+	switch r := Resolve(t).(type) {
+	case *Basic:
+		if r != Unit && r != ErrorT {
+			return
+		}
+	case *Var, *Invalid:
+		return
+	}
+	d := c.errorf("R0301", x.Span(), "cannot interpolate a %s: `${...}` takes an Int, Float, Bool, Byte or String", Deep(t))
+	switch r := Resolve(t).(type) {
+	case *Basic:
+		if r == ErrorT {
+			d.Notes = append(d.Notes, "interpolate the error's message")
+			end := x.Span().End
+			d.Fixes = append(d.Fixes, diag.Fix{Title: "interpolate its message",
+				Edits: []diag.Edit{c.fset.Edit(syntax.Span{Start: end, End: end}, ".message()")}})
+		}
+	case *List:
+		d.Notes = append(d.Notes, "join the elements into a String first, as in `xs.map(|x| x.to_string()).join(\", \")`")
+	case *Option, *Result:
+		d.Notes = append(d.Notes, "handle both cases first, for example with match or `.unwrap_or(...)`")
+	case *Named:
+		d.Notes = append(d.Notes, fmt.Sprintf("give %s a method that returns a String and interpolate its result, as in `${x.show()}`", r.Decl.Name))
+	}
 }
 
 // cast checks `x as T`, which converts between Int, Float and Byte. A

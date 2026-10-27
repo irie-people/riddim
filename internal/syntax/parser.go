@@ -713,7 +713,7 @@ func (p *parser) postfix(x Expr) Expr {
 
 func startsExpr(k Kind) bool {
 	switch k {
-	case INT, FLOAT, STRING, TRUE, FALSE, IDENT, SELF, SELFTYPE, LPAREN, LBRACK, LBRACE,
+	case INT, FLOAT, STRING, STRHEAD, TRUE, FALSE, IDENT, SELF, SELFTYPE, LPAREN, LBRACK, LBRACE,
 		IF, MATCH, WHILE, LOOP, FOR, PIPE, OROR, RETURN, BREAK, CONTINUE, MINUS, NOT:
 		return true
 	}
@@ -732,6 +732,8 @@ func (p *parser) primary() Expr {
 	case STRING:
 		p.next()
 		return &StringLit{Start: t.Pos, End: t.End, Value: t.Text}
+	case STRHEAD:
+		return p.interp()
 	case TRUE, FALSE:
 		p.next()
 		return &BoolLit{ValuePos: t.Pos, Value: t.Kind == TRUE}
@@ -814,6 +816,33 @@ func (p *parser) primary() Expr {
 	}
 	p.unexpected("an expression")
 	return nil
+}
+
+// interp parses an interpolated string: STRHEAD expr (STRMID expr)* STRTAIL.
+func (p *parser) interp() Expr {
+	lit := &InterpLit{Start: p.tok.Pos, Parts: []string{p.tok.Text}}
+	p.next()
+	saved := p.noStruct
+	p.noStruct = false
+	defer func() { p.noStruct = saved }()
+	for {
+		if p.tok.Kind == STRMID || p.tok.Kind == STRTAIL {
+			p.fail("R0105", p.tok.Span(), "expected an expression in `${}`; write `\\$` for a literal $")
+		}
+		lit.Exprs = append(lit.Exprs, p.expr())
+		switch p.tok.Kind {
+		case STRMID:
+			lit.Parts = append(lit.Parts, p.tok.Text)
+			p.next()
+		case STRTAIL:
+			lit.Parts = append(lit.Parts, p.tok.Text)
+			lit.End = p.tok.End
+			p.next()
+			return lit
+		default:
+			p.unexpected("`}` to end the interpolation")
+		}
+	}
 }
 
 func (p *parser) loopBody() *BlockExpr {
@@ -1065,6 +1094,8 @@ func (p *parser) patternNoOr() Pattern {
 		return &LitPat{Lit: p.primary()}
 	case FLOAT:
 		p.fail("R0105", t.Span(), "a Float literal cannot be a pattern; bind it and use a guard: `x if x == %s`", t.Text)
+	case STRHEAD:
+		p.fail("R0105", t.Span(), "a pattern cannot interpolate; bind the string and use a guard: `s if s == ...`")
 	case MINUS:
 		p.next()
 		if p.tok.Kind != INT {

@@ -21,6 +21,12 @@ func tokens(t *testing.T, src string) (string, []string) {
 			parts = append(parts, tok.Text)
 		case STRING:
 			parts = append(parts, `"`+tok.Text+`"`)
+		case STRHEAD:
+			parts = append(parts, `"`+tok.Text+`${`)
+		case STRMID:
+			parts = append(parts, `}`+tok.Text+`${`)
+		case STRTAIL:
+			parts = append(parts, `}`+tok.Text+`"`)
 		default:
 			parts = append(parts, tok.Kind.String())
 		}
@@ -66,6 +72,11 @@ func TestNewlineRules(t *testing.T) {
 		{"1..10 1..=2 3.5 1e9 0xff 1_000", "1 .. 10 1 ..= 2 3.5 1e9 0xff 1_000 ;"},
 		{`"a\n\t\"\\\$\u{48}"`, "\"a\n\t\"\\$H\" ;"},
 		{"a -> b => c :: d", "a -> b => c :: d ;"},
+		// interpolation
+		{`"a ${x} b ${y.z(1)} c"` + "\n", `"a ${ x } b ${ y . z ( 1 ) } c" ;`},
+		{`"${n}"`, `"${ n }" ;`},
+		{`"${ "in ${m}" } ${ { 1 } }"`, `"${ "in ${ m }" } ${ { 1 } }" ;`},
+		{`"\${not} $ alone"`, `"${not} $ alone" ;`},
 	}
 	for _, tt := range tests {
 		got, codes := tokens(t, tt.src)
@@ -85,7 +96,9 @@ func TestLexErrors(t *testing.T) {
 		{"1__0", "R0104"},
 		{"12abc", "R0104"},
 		{"0x", "R0104"},
-		{`"n = ${n}"`, "R0106"},
+		{"\"n = ${n\n", "R0102"},
+		{"\"n = ${n} \n", "R0102"},
+		{"\"n = ${\"in", "R0102"},
 	}
 	for _, tt := range tests {
 		_, codes := tokens(t, tt.src)
@@ -187,6 +200,9 @@ func TestParseErrors(t *testing.T) {
 		{"fn f() { if let Some(x) = y { } }", "R0106"},
 		{"use go \"strings\"", "R0106"},
 		{"fn f(m: Map<String, Int>) { }", "R0106"},
+		{`fn f() { let s = "${}" }`, "R0105"},
+		{`fn f() { let s = "${1 2}" }`, "R0105"},
+		{`fn f() { match s { "a${b}" => 1 } }`, "R0105"},
 		{"fn f() { a < b < c }", "R0105"},
 		{"fn f(x) { }", "R0105"},
 		{"struct P(Int)", "R0105"},

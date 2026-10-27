@@ -1,0 +1,18 @@
+hello, alice: 42
+42
+alice
+sum 43 float 3 bool true byte 7
+nested inner alice done
+point (1, 2)
+list 3 items
+dollar ${not} $ $ alone $
+braces { } 6
+pos
+empty parts: |
+joined ab
+float 0.30000000000000004 0
+unicode é😀
+id 42!
+first #1 2
+<1><2><3>
+err bad
