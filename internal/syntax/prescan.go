@@ -22,7 +22,8 @@ import (
 // scanHabits returns the habits in a file's tokens.
 func scanHabits(fs *FileSet, src *Source, toks []Token) []diag.Diagnostic {
 	s := &prescan{fs: fs, src: src, toks: toks, letDepth: -1, closure: -1,
-		globals: map[string]bool{}, members: map[string]bool{}, skip: map[int]bool{}}
+		globals: map[string]bool{}, members: map[string]bool{}, skip: map[int]bool{},
+		pairs: pairBrackets(toks)}
 	s.declared()
 	for i := 0; i < len(toks) && toks[i].Kind != EOF; {
 		i = s.step(i)
@@ -62,6 +63,29 @@ type prescan struct {
 	closure  int          // the stack depth of the closure whose parameters are being read, or -1
 	params   []sigParam   // the parameters of the function being read
 	skip     map[int]bool // tokens that are part of a habit already reported
+	pairs    []int        // for each opening bracket, the index of its closer, or -1
+}
+
+// pairBrackets matches the brackets of toks in one pass, so that finding a
+// closer never rescans the file. A closer that does not match the innermost
+// open bracket closes nothing.
+func pairBrackets(toks []Token) []int {
+	pairs := make([]int, len(toks))
+	var open []int
+	for i, t := range toks {
+		pairs[i] = -1
+		switch t.Kind {
+		case LPAREN, LBRACK, LBRACE:
+			open = append(open, i)
+		case RPAREN, RBRACK, RBRACE:
+			want := map[Kind]Kind{RPAREN: LPAREN, RBRACK: LBRACK, RBRACE: LBRACE}[t.Kind]
+			if n := len(open); n > 0 && toks[open[n-1]].Kind == want {
+				pairs[open[n-1]] = i
+				open = open[:n-1]
+			}
+		}
+	}
+	return pairs
 }
 
 func (s *prescan) tok(i int) Token {
@@ -75,7 +99,11 @@ func (s *prescan) tok(i int) Token {
 }
 
 func (s *prescan) text(sp Span) string {
-	return string(s.src.Src[s.src.Offset(sp.Start):s.src.Offset(sp.End)])
+	from, to := s.src.Offset(sp.Start), s.src.Offset(sp.End)
+	if from > to {
+		return ""
+	}
+	return string(s.src.Src[from:to])
 }
 
 func (s *prescan) report(code string, sp Span, format string, args ...any) *diag.Diagnostic {
@@ -258,11 +286,8 @@ func (s *prescan) open(i int) int {
 
 func (s *prescan) close(k Kind) {
 	open := map[Kind]Kind{RPAREN: LPAREN, RBRACK: LBRACK, RBRACE: LBRACE}[k]
-	for n := len(s.stack) - 1; n >= 0; n-- {
-		if s.stack[n].kind == open {
-			s.stack = s.stack[:n]
-			break
-		}
+	if n := len(s.stack); n > 0 && s.stack[n-1].kind == open {
+		s.stack = s.stack[:n-1]
 	}
 	if s.letDepth > len(s.stack) {
 		s.letDepth = -1
@@ -274,27 +299,20 @@ func (s *prescan) close(k Kind) {
 
 // matching returns the index of the bracket that closes the one at i, or -1.
 func (s *prescan) matching(i int) int {
-	depth := 0
-	for k := i; k < len(s.toks); k++ {
-		switch s.toks[k].Kind {
-		case LPAREN, LBRACK, LBRACE:
-			depth++
-		case RPAREN, RBRACK, RBRACE:
-			if depth--; depth == 0 {
-				return k
-			}
-		case EOF:
-			return -1
-		}
+	if i < 0 || i >= len(s.pairs) {
+		return -1
 	}
-	return -1
+	return s.pairs[i]
 }
 
+// maxAngle bounds the search for the `>` of a list of type arguments.
+const maxAngle = 64
+
 // matchAngle returns the index after the `>` that closes the `<` at i, or
-// i+1 when there is none on the way to the end of the statement.
+// i+1 when there is none soon, before the end of the statement.
 func (s *prescan) matchAngle(i int) int {
 	depth := 0
-	for k := i; k < len(s.toks); k++ {
+	for k := i; k < len(s.toks) && k < i+maxAngle; k++ {
 		switch s.toks[k].Kind {
 		case LT:
 			depth++
@@ -321,7 +339,9 @@ func (s *prescan) args(from, to int) [][2]int {
 			depth--
 		case COMMA:
 			if depth == 0 {
-				out = append(out, [2]int{start, k})
+				if start < k {
+					out = append(out, [2]int{start, k})
+				}
 				start = k + 1
 			}
 		}
@@ -457,17 +477,17 @@ func (s *prescan) typ(j int, parserOnly bool) int {
 			d.Fixes = append(d.Fixes, fix("write "+text, s.fs.Edit(sp, text)))
 			return vEnd
 		}
-		end, n := j+1, 0
+		end, n, ok := j+1, 0, true
 		if s.tok(end).Kind == LT {
-			end, n = s.typeArgs(end, parserOnly)
+			end, n, ok = s.typeArgs(end, parserOnly)
 		}
-		if !parserOnly && !s.globals[t.Text] {
+		if ok && !parserOnly && !s.globals[t.Text] {
 			s.namedType(j, end, n)
 		}
 		return end
 	case SELFTYPE:
 		if s.tok(j+1).Kind == LT {
-			end, _ := s.typeArgs(j+1, parserOnly)
+			end, _, _ := s.typeArgs(j+1, parserOnly)
 			return end
 		}
 		return j + 1
@@ -510,14 +530,14 @@ func (s *prescan) typeList(j int, closer Kind, parserOnly bool) (int, bool) {
 	return j, s.tok(j).Kind == closer
 }
 
-// typeArgs reads `<A, B>` at i and returns the index after it and the number
-// of arguments.
-func (s *prescan) typeArgs(i int, parserOnly bool) (int, int) {
+// typeArgs reads `<A, B>` at i and returns the index after it, the number
+// of arguments, and whether a `>` closed them.
+func (s *prescan) typeArgs(i int, parserOnly bool) (int, int, bool) {
 	j, n := i+1, 0
 	for s.tok(j).Kind != GT {
 		end := s.typ(j, parserOnly)
 		if end == j {
-			return j, n
+			return j, n, false
 		}
 		n++
 		j = end
@@ -527,9 +547,9 @@ func (s *prescan) typeArgs(i int, parserOnly bool) (int, int) {
 		j++
 	}
 	if s.tok(j).Kind != GT {
-		return j, n
+		return j, n, false
 	}
-	return j + 1, n
+	return j + 1, n, true
 }
 
 func (s *prescan) listType(sp Span, format, elem string) {
@@ -671,7 +691,10 @@ header:
 		case RPAREN, RBRACK:
 			depth--
 		case TERM:
-			if depth == 0 && !t.Implicit {
+			if depth == 0 && t.Implicit {
+				break header // the header ends with its line
+			}
+			if depth == 0 {
 				semis = append(semis, k)
 			}
 		case INCR, DECR:
@@ -715,8 +738,8 @@ func (s *prescan) goRange(first, assign Token) {
 // turbofish reports `::<T>` after a name (R0116); the checker does not read
 // the types in it, so only the parser's habits there are reported.
 func (s *prescan) turbofish(i int) int {
-	end, _ := s.typeArgs(i+1, true)
-	if s.tok(end-1).Kind != GT || end <= i+2 {
+	end, _, ok := s.typeArgs(i+1, true)
+	if !ok {
 		return i + 1
 	}
 	sp := Span{s.toks[i].Pos, s.toks[end-1].End}
@@ -930,7 +953,7 @@ func (s *prescan) macro(i int) {
 		case to-from == 1 && first.Kind == STRING:
 			v := first.Text
 			a.str = &v
-		case first.Kind == STRHEAD && s.oneString(from) == to:
+		case first.Kind == STRHEAD && s.oneString(from, to) == to:
 			a.interp = true
 		}
 		args = append(args, a)
@@ -939,10 +962,10 @@ func (s *prescan) macro(i int) {
 }
 
 // oneString returns the index after the interpolated string literal that
-// starts at i.
-func (s *prescan) oneString(i int) int {
+// starts at i, if it ends before to.
+func (s *prescan) oneString(i, to int) int {
 	depth := 0
-	for k := i; k < len(s.toks); k++ {
+	for k := i; k < to; k++ {
 		switch s.toks[k].Kind {
 		case STRHEAD:
 			depth++
