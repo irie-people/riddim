@@ -5,6 +5,4 @@ fn count(m: Map<String, Int>) -> Int {
 }
 
 fn main() {
-    if let Some(x) = None {
-    }
 }

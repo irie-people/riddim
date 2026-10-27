@@ -285,15 +285,32 @@ func (c *checker) forExpr(e *syntax.ForExpr) {
 	c.popScope()
 }
 
-// ifExpr checks an if. With discard set, the branch values are dropped.
+// ifExpr checks an if or an if let. With discard set, the branch values are
+// dropped.
 func (c *checker) ifExpr(e *syntax.IfExpr, want Type, discard bool) Type {
-	c.expr(e.Cond, Bool)
+	var then func(want Type, discard bool) Type
+	if e.Pat == nil {
+		c.expr(e.Cond, Bool)
+		then = func(want Type, discard bool) Type { return c.block(e.Then, want, discard) }
+	} else {
+		// if let p = x { a } else { b } is match x { p => a, _ => b }: the
+		// pattern may fail to match, and its names are bound in a only.
+		st := c.expr(e.Cond, nil)
+		then = func(want Type, discard bool) Type {
+			c.pushScope()
+			defer c.popScope()
+			b := &binder{locals: map[string]*Local{}}
+			c.pat(e.Pat, st, b)
+			b.declare(c)
+			return c.block(e.Then, want, discard)
+		}
+	}
 	if e.Else == nil {
-		c.info.Types[e.Then] = c.block(e.Then, nil, true)
+		c.info.Types[e.Then] = then(nil, true)
 		return Unit
 	}
 	if discard {
-		t1 := c.block(e.Then, nil, true)
+		t1 := then(nil, true)
 		c.info.Types[e.Then] = t1
 		t2 := c.discard(e.Else)
 		if isNever(t1) && isNever(t2) {
@@ -301,7 +318,7 @@ func (c *checker) ifExpr(e *syntax.IfExpr, want Type, discard bool) Type {
 		}
 		return Unit
 	}
-	t1 := c.block(e.Then, want, false)
+	t1 := then(want, false)
 	c.info.Types[e.Then] = t1
 	w := want
 	if w == nil && !isNever(t1) && !isInvalid(t1) {

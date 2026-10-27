@@ -409,6 +409,10 @@ func (f *fn) fieldSel(x *syntax.FieldExpr) string {
 // ---- Control flow ----
 
 func (f *fn) ifInto(x *syntax.IfExpr, d dest) {
+	if x.Pat != nil {
+		f.ifLetInto(x, d)
+		return
+	}
 	c := f.expr(x.Cond)
 	if c.never {
 		return
@@ -430,6 +434,14 @@ func (f *fn) ifRest(x *syntax.IfExpr, cond string, d dest) {
 		f.printf("}\n")
 		f.terminated = false
 	case *syntax.IfExpr:
+		if el.Pat != nil {
+			f.printf("} else {\n")
+			f.ifLetInto(el, d)
+			t2 := f.terminated
+			f.printf("}\n")
+			f.terminated = t1 && t2
+			return
+		}
 		pre, c := f.capture(func() value { return f.expr(el.Cond) })
 		if pre == "" && !c.never {
 			f.printf("} else ")
@@ -452,6 +464,22 @@ func (f *fn) ifRest(x *syntax.IfExpr, cond string, d dest) {
 		t2 := f.terminated
 		f.printf("}\n")
 		f.terminated = t1 && t2
+	}
+}
+
+// ifLetInto lowers `if let p = x { a } else { b }` as the match it stands
+// for, `match x { p => a, _ => b }`. Without an else, a's value is dropped.
+func (f *fn) ifLetInto(x *syntax.IfExpr, d dest) {
+	rest := x.Else
+	if rest == nil {
+		rest = &syntax.BlockExpr{Lbrace: x.Then.Rbrace, Rbrace: x.Then.Rbrace}
+		d = discard
+	}
+	m := &syntax.MatchExpr{Match: x.If, Subject: x.Cond, Lbrace: x.Then.Lbrace, Rbrace: x.Then.Rbrace,
+		Arms: []*syntax.MatchArm{{Pat: x.Pat, Body: x.Then}, {Pat: &syntax.WildcardPat{Under: x.If}, Body: rest}}}
+	f.matchInto(m, d)
+	if x.Else == nil {
+		f.terminated = false
 	}
 }
 

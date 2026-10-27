@@ -310,9 +310,11 @@ type (
 		Stmts  []Stmt
 		Rbrace Pos
 	}
-	// IfExpr is `if cond { } else ...`; Else is nil, a *BlockExpr or an *IfExpr.
+	// IfExpr is `if cond { } else ...`, or with Pat set `if let Pat = Cond
+	// { }`; Else is nil, a *BlockExpr or an *IfExpr.
 	IfExpr struct {
 		If   Pos
+		Pat  Pattern
 		Cond Expr
 		Then *BlockExpr
 		Else Expr

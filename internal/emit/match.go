@@ -333,6 +333,10 @@ func (f *fn) matchChain(alts []alt, subj string, d dest) bool {
 		conds := t.conds
 		if final {
 			conds = nil
+			if open && d.kind == dDiscard && isEmptyBlock(a.arm.Body) {
+				allTerm = false // a final arm that does nothing needs no else
+				break
+			}
 		}
 		if a.arm.Guard != nil {
 			conds = append(append([]string{}, conds...), f.guardCond(a.arm.Guard, t))
@@ -365,6 +369,11 @@ func (f *fn) matchChain(alts []alt, subj string, d dest) bool {
 	}
 	f.terminated = allTerm && len(alts) > 0 || len(alts) == 0
 	return used
+}
+
+func isEmptyBlock(x syntax.Expr) bool {
+	b, ok := x.(*syntax.BlockExpr)
+	return ok && len(b.Stmts) == 0
 }
 
 func nonEmpty(conds []string) []string {

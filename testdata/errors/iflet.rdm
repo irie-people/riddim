@@ -1,0 +1,10 @@
+fn main() {
+    let o = Some(1)
+    if let Ok(x) = o {
+        let _ = x
+    }
+    let r: Result<Int, String> = Ok(1)
+    if let Ok(n) | Err(n) = r {
+        let _ = n
+    }
+}

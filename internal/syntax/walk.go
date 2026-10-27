@@ -68,7 +68,11 @@ func Inspect(n Node, f func(Node) bool) {
 			each(s)
 		}
 	case *IfExpr:
-		each(n.Cond, n.Then)
+		each(n.Cond)
+		if n.Pat != nil {
+			each(n.Pat)
+		}
+		each(n.Then)
 		if n.Else != nil {
 			each(n.Else)
 		}

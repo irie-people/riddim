@@ -1,0 +1,86 @@
+// `if let p = e { } else { }` is a two-arm match.
+
+enum Shape {
+    Circle(Float),
+    Rect(Float, Float),
+    Empty,
+}
+
+fn radius(s: Shape) -> Float {
+    if let Circle(r) = s { r } else { 0.0 }
+}
+
+fn describe(o: Option<Int>) -> String {
+    if let Some(n) = o {
+        if n > 10 {
+            return "big"
+        }
+        "small ${n}"
+    } else {
+        "none"
+    }
+}
+
+fn classify(r: Result<Int, String>) -> String {
+    if let Ok(n) = r {
+        "ok ${n}"
+    } else if let Err("") = r {
+        "empty error"
+    } else if let Err(e) = r {
+        "error ${e}"
+    } else {
+        "unreachable"
+    }
+}
+
+fn first_positive(xs: List<Int>) -> Option<Int> {
+    for x in xs {
+        if let Some(p) = if x > 0 { Some(x) } else { None } {
+            return Some(p)
+        }
+    }
+    None
+}
+
+fn main(sys: Sys) {
+    sys.out.println(radius(Shape::Circle(2.5)).to_string())
+    sys.out.println(radius(Shape::Empty).to_string())
+    sys.out.println(describe(Some(3)) + " " + describe(Some(30)) + " " + describe(None))
+    sys.out.println(classify(Ok(1)) + ", " + classify(Err("")) + ", " + classify(Err("bad")))
+    let pair = (Some(1), Some("x"))
+    if let (Some(n), Some(s)) = pair {
+        sys.out.println("both ${n} ${s}")
+    }
+    if let (Some(_), None) = pair {
+        sys.out.println("never")
+    }
+    let shapes = [Shape::Rect(1.0, 2.0), Shape::Circle(1.0), Shape::Rect(3.0, 3.0)]
+    let mut area = 0.0
+    for s in shapes {
+        if let Rect(w, h) = s {
+            area += w * h
+        }
+    }
+    sys.out.println(area.to_string())
+    let r: Result<Int, Int> = Err(5)
+    if let Ok(n) | Err(n) = r {
+        sys.out.println("either ${n}")
+    }
+    let value = if let Some(x) = Some(4) { x * 2 } else { 0 }
+    sys.out.println(value.to_string())
+    let mut k = 0
+    while k < 3 {
+        if let 1 = k {
+            sys.out.println("one")
+        } else {
+            sys.out.println("not one ${k}")
+        }
+        k += 1
+    }
+    sys.out.println(first_positive([-1, 0, 7, 9]).unwrap_or(0).to_string())
+    if let Some(_) = first_positive([-1]) {
+        sys.out.println("never")
+    } else {
+        sys.out.println("no positive")
+    }
+}

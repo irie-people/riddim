@@ -788,6 +788,9 @@ func (p *parser) primary() Expr {
 		return p.matchExpr()
 	case WHILE:
 		p.next()
+		if p.tok.Kind == LET {
+			p.fail("R0105", Span{t.Pos, p.tok.End}, "`while let` is not supported: write `loop { match e { p => ..., _ => break } }`")
+		}
 		cond := p.exprNoStruct()
 		return &WhileExpr{While: t.Pos, Cond: cond, Body: p.loopBody()}
 	case LOOP:
@@ -931,10 +934,13 @@ func (p *parser) structLit(name *Ident) Expr {
 
 func (p *parser) ifExpr() Expr {
 	pos := p.expect(IF, "`if`").Pos
+	x := &IfExpr{If: pos}
 	if p.tok.Kind == LET {
-		p.fail("R0106", Span{pos, p.tok.End}, "`if let` is not supported in this version; use match")
+		p.next()
+		x.Pat = p.pattern()
+		p.expect(ASSIGN, "`=` after the pattern of `if let`")
 	}
-	x := &IfExpr{If: pos, Cond: p.exprNoStruct()}
+	x.Cond = p.exprNoStruct()
 	if p.tok.Kind != LBRACE {
 		p.unexpected("`{` after the condition")
 	}
