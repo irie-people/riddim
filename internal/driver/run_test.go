@@ -85,7 +85,7 @@ func runPrograms(t *testing.T) []program {
 // vet, runs each binary and compares its standard output and exit status.
 func TestRun(t *testing.T) {
 	ps := runPrograms(t)
-	for _, required := range []string{"example_hello", "example_shapes", "example_parse"} {
+	for _, required := range []string{"example_hello", "example_shapes", "example_parse", "example_events"} {
 		found := false
 		for _, p := range ps {
 			found = found || p.name == required

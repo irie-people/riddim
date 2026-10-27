@@ -1,0 +1,7 @@
+s1: local-20b, done, 1200 tokens, tools: grep, edit
+s2: cloud, failed: context overflow, 800 tokens, tools: edit
+2 sessions, 1 done, 2000 tokens, 1000 per session
+grep: 1
+edit: 2
+after 4 events, s1: local-20b, running, 1200 tokens, tools: grep
+events for unknown sessions: 1

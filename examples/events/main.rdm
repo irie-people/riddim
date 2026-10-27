@@ -1,0 +1,120 @@
+// Events: an append-only log of what happened to agent sessions, folded
+// into the state of each session. This is the shape of Irie's core: a
+// state is derived from the events, never stored apart from them.
+
+/// Something that happened to a session. The log only grows.
+enum Event {
+    Started(session: String, model: String),
+    Prompted(session: String, tokens: Int),
+    Called(session: String, tool: String),
+    Failed(session: String, reason: String),
+    Finished(session: String),
+}
+
+impl Event {
+    /// The session the event belongs to.
+    fn session(self) -> String {
+        match self {
+            Started(s, _) | Prompted(s, _) | Called(s, _) | Failed(s, _) => s,
+            Finished(s) => s,
+        }
+    }
+}
+
+/// What a session is doing.
+enum Status {
+    Running,
+    Failed(reason: String),
+    Done,
+}
+
+/// The state of one session, derived from its events.
+struct Session {
+    model: String,
+    status: Status,
+    tokens: Int,
+    tools: List<String>,
+}
+
+impl Session {
+    fn describe(self) -> String {
+        let status = match self.status {
+            Running => "running",
+            Failed(r) => "failed: ${r}",
+            Done => "done",
+        }
+        let tools = if self.tools.is_empty() { "none" } else { self.tools.join(", ") }
+        "${self.model}, ${status}, ${self.tokens} tokens, tools: ${tools}"
+    }
+}
+
+/// Applies one event to the states so far. An event for a session that
+/// never started, or that has stopped running, changes nothing.
+fn apply(states: Map<String, Session>, e: Event) -> Map<String, Session> {
+    if let Started(id, model) = e {
+        return states.insert(id, Session { model: model, status: Status::Running, tokens: 0, tools: [] })
+    }
+    let id = e.session()
+    if let Some(s) = states.get(id) {
+        if s.status == Status::Running {
+            return states.insert(id, step(s, e))
+        }
+    }
+    states
+}
+
+fn step(s: Session, e: Event) -> Session {
+    match e {
+        Prompted(_, n) => Session { tokens: s.tokens + n, ..s },
+        Called(_, tool) => Session { tools: s.tools.push(tool), ..s },
+        Failed(_, reason) => Session { status: Status::Failed(reason), ..s },
+        Finished(_) => Session { status: Status::Done, ..s },
+        Started(_, _) => s,
+    }
+}
+
+/// How often each tool was called, over all sessions, in order of first use.
+fn tool_counts(log: List<Event>) -> Map<String, Int> {
+    let mut counts: Map<String, Int> = Map::new()
+    for e in log {
+        if let Called(_, tool) = e {
+            counts = counts.insert(tool, counts.get(tool).unwrap_or(0) + 1)
+        }
+    }
+    counts
+}
+
+fn main(sys: Sys) {
+    let log = [
+        Event::Started("s1", "local-20b"),
+        Event::Started("s2", "cloud"),
+        Event::Prompted("s1", 1200),
+        Event::Called("s1", "grep"),
+        Event::Prompted("s2", 800),
+        Event::Called("s2", "edit"),
+        Event::Called("s1", "edit"),
+        Event::Failed("s2", "context overflow"),
+        Event::Prompted("s2", 50),
+        Event::Prompted("s3", 99),
+        Event::Finished("s1"),
+    ]
+    let states = log.fold(Map::new(), apply)
+    for (id, s) in states {
+        sys.out.println("${id}: ${s.describe()}")
+    }
+    let sessions = states.values()
+    let total = sessions.map(|s| s.tokens).sum()
+    let done = sessions.filter(|s| s.status == Status::Done).len()
+    let mean = total as Float / states.len() as Float
+    sys.out.println("${states.len()} sessions, ${done} done, ${total} tokens, ${mean} per session")
+    for (tool, n) in tool_counts(log) {
+        sys.out.println("${tool}: ${n}")
+    }
+    // Replaying a prefix of the log gives the states at that point.
+    let early = log.slice(0, 4).fold(Map::new(), apply)
+    if let Some(s) = early.get("s1") {
+        sys.out.println("after 4 events, s1: ${s.describe()}")
+    }
+    let unknown = log.filter(|e| !states.contains_key(e.session()))
+    sys.out.println("events for unknown sessions: ${unknown.len()}")
+}
