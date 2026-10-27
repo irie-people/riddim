@@ -445,6 +445,26 @@ func parseFloat(s string) Result[float64, error] {
 	return Ok[float64, error](f)
 }
 
+// listCopy copies a list on its way to or from Go, so that Go code never
+// holds a Riddim list's storage.
+func listCopy[T any](xs []T) []T { return slices.Clone(xs) }
+
+// goResult turns a Go function's results (v, err) into a Result.
+func goResult[T any](v T, err error) Result[T, error] {
+	if err != nil {
+		return Err[T](err)
+	}
+	return Ok[T, error](v)
+}
+
+// goError turns a Go function's error result into a Result<(), Error>.
+func goError(err error) Result[struct{}, error] {
+	if err != nil {
+		return Err[struct{}](err)
+	}
+	return Ok[struct{}, error](struct{}{})
+}
+
 // Out is the Out capability: a stream to print to.
 type Out struct{ w *os.File }
 

@@ -1,0 +1,18 @@
+4 words: the|quick|brown|fox
+THE QUICK BROWN FOX
+ababab true 2 3
+atoi: 43
+atoi failed: strconv.Atoi: parsing "4x2": invalid syntax
+float: 5 0.333 "tab\there"
+parse bool fails: true
+sqrt 1.4142135623730951, pow 1024, tau 6.283185307179586, pi 3.141592653589793
+big 2147483648, max 9223372036854775807, min8 -128, nan true, inf +Inf
+rune 65, upper true, letter false, max 1114111
+utf8 5 4 true 65533
+rune error + 1 = 65534
+appended: 2 -> 5, valid true, false
+encoded 2 bytes; the list is unchanged: 0,0,0,0
+is upper: true false false
+parsed 7 -1
+lower 97
+a local hides the package

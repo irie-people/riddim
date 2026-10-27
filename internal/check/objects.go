@@ -153,6 +153,7 @@ type Info struct {
 	Funcs     map[*syntax.FuncDecl]*FuncObj
 	Consts    map[*syntax.ConstDecl]*ConstObj
 	TypeDecls map[syntax.Decl]*TypeDecl
+	Go        map[syntax.Expr]*GoUse // Go calls (*syntax.MethodCallExpr) and members (*syntax.FieldExpr)
 }
 
 // UseKind says what a name in an expression refers to.

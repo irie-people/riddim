@@ -1,0 +1,27 @@
+use go "strings"
+use go "strconv"
+use go "math"
+use go "unicode"
+
+fn main() {
+    let a = strings.NewReader("x")
+    let b = strconv.ParseInt("1", 10, 64)
+    let c = strings.Cut("a,b", ",")
+    let d = strings.FieldsFunc("a b", unicode.IsSpace)
+    let e = strconv.ErrRange
+    let f = strings.Builder
+    let g = math.MaxUint64
+    let h = math.Frexp(1.0)
+    let i = strings.NewReplacer("a", "b")
+    let j = math.Pi()
+    let _ = a
+    let _ = b
+    let _ = c
+    let _ = d
+    let _ = e
+    let _ = f
+    let _ = g
+    let _ = h
+    let _ = i
+    let _ = j
+}

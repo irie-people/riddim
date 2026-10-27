@@ -56,6 +56,8 @@ var Codes = map[string]string{
 	"R0504": "? with a different error type",
 	"R0505": "misplaced ?",
 
+	"R0601": "Go package not allowed",
+	"R0602": "Go function or constant without a Riddim type",
 	"R0603": "capabilities cannot be made",
 	"R0604": "main is missing or has the wrong signature",
 

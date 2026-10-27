@@ -1,0 +1,21 @@
+use go "strings"
+use go "math"
+
+fn math() -> Int {
+    1
+}
+
+fn main() {
+    let a = strings.Feilds("x")
+    let b = strings.indexFunc
+    let c = strings
+    let d = strconv.Itoa(1)
+    let e: Int = strings.Repeat("a", 2)
+    let f = strings.Repeat("a")
+    let _ = a
+    let _ = b
+    let _ = c
+    let _ = d
+    let _ = e
+    let _ = f
+}

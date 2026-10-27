@@ -186,14 +186,14 @@ A program is the `.rdm` files of one directory, and Riddim's own types need no i
 
 ## R0201 unknown name
 
-The name is not declared, or is a type used as a value. The message lists the closest known names. Enum variants are written with their enum in expressions.
+The name is not declared, or is a type or a Go package used as a value, or a Go package has no exported member of that name. The message lists the closest known names. Enum variants are written with their enum in expressions; a Go package needs `use go`.
 
     let c = Circle(1.0)
     let c = Shape::Circle(1.0)                   // fix
 
 ## R0202 duplicate name
 
-A name declared twice in the same place: two top-level items, two fields, variants, parameters or type parameters, a field and a method of one struct, a name bound twice in one pattern, or a built-in name such as `Option`, `Ok` or `error`.
+A name declared twice in the same place: two top-level items, or one and a Go package of `use go`; two fields, variants, parameters or type parameters; a field and a method of one struct; a name bound twice in one pattern; or a built-in name such as `Option`, `Ok` or `error`.
 
     struct Option { }
     struct Choice { }                            // fix
@@ -324,6 +324,20 @@ Turn the Option into a Result first. The fix inserts `.ok_or(error("missing valu
 
     fn main() { let n = "1".parse_int()? }
     fn main() -> Result<(), Error> { let n = "1".parse_int()?; Ok(()) }   // fix
+
+## R0601 Go package not allowed
+
+`use go` imports only Go packages that cannot reach outside the program: `strings`, `strconv`, `math`, `unicode` and `unicode/utf8`. The message names the capability to use instead: `Fs` or `Env` for `os`, `Out` for `fmt`, `Clock` for `time`. Third-party Go modules come in v0.2. A package that cannot be read from the Go installation is reported here too.
+
+    use go "os"
+    fn main(sys: Sys) { let text = sys.fs.read("a.txt") }   // fix: the capability
+
+## R0602 Go function or constant without a Riddim type
+
+Riddim calls the Go functions and reads the Go constants whose types map to Riddim's: `int` and `rune` to Int, `float64` to Float, `bool` to Bool, `string` to String, `byte` to Byte, `error` to Error, `[]T` to `List<T>`; and whose results are `T`, `(T, error)` or `error`. Other types (`int64`, `*strings.Reader`, functions), no result, two or more results otherwise, a variable number of arguments, Go variables and Go types are refused, as is a constant that does not fit.
+
+    let n = strconv.ParseInt(text, 10, 64)?     // int64
+    let n = strconv.Atoi(text)?                  // fix
 
 ## R0603 capabilities cannot be made
 

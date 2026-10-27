@@ -679,6 +679,12 @@ func (f *fn) expr(x syntax.Expr) value {
 	case *syntax.MethodCallExpr:
 		return f.methodCall(x)
 	case *syntax.FieldExpr:
+		if gu := f.info.Go[x]; gu != nil {
+			if gu.Func != nil {
+				return f.goFuncValue(gu)
+			}
+			return f.goConst(gu)
+		}
 		v := f.expr(x.X)
 		if v.never {
 			return v
@@ -961,6 +967,9 @@ func unparen(x syntax.Expr) syntax.Expr {
 }
 
 func (f *fn) methodCall(x *syntax.MethodCallExpr) value {
+	if gu := f.info.Go[x]; gu != nil {
+		return f.goCall(x.Args, gu)
+	}
 	mu := f.info.Methods[x]
 	vals, never := f.list(append([]syntax.Expr{x.Recv}, x.Args...))
 	if never {
@@ -1287,6 +1296,9 @@ func (f *fn) isConst(x syntax.Expr) bool {
 		return f.isConst(x.X)
 	case *syntax.AsExpr:
 		return f.info.Casts[x].Const != nil
+	case *syntax.FieldExpr:
+		gu := f.info.Go[x]
+		return gu != nil && gu.Const != nil
 	case *syntax.BinaryExpr:
 		return f.isConst(x.X) && f.isConst(x.Y) && !(x.Op == syntax.PERCENT && check.Resolve(f.typeOf(x)) == check.Float)
 	}

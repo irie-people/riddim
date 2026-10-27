@@ -1,0 +1,64 @@
+// Go packages: use go, the type mapping, and lists copied at the boundary.
+
+use go "strings"
+use go "strconv"
+use go "math"
+use go "unicode"
+use go "unicode/utf8"
+
+const TAU: Float = 2.0 * math.Pi
+const BIG: Int = math.MaxInt32 + 1
+const REPLACEMENT: Int = utf8.RuneError
+
+fn words(text: String) -> List<String> {
+    strings.Fields(text)
+}
+
+fn shout(xs: List<String>) -> List<String> {
+    xs.map(strings.ToUpper)
+}
+
+fn main(sys: Sys) -> Result<(), Error> {
+    let ws = words("  the quick  brown fox ")
+    sys.out.println("${ws.len()} words: ${strings.Join(ws, "|")}")
+    sys.out.println(shout(ws).join(" "))
+    sys.out.println("${strings.Repeat("ab", 3)} ${strings.Contains("riddim", "dd")} ${strings.Index("riddim", "d")} ${strings.Count("cheese", "e")}")
+
+    let n = strconv.Atoi("42")?
+    sys.out.println("atoi: ${n + 1}")
+    match strconv.Atoi("4x2") {
+        Ok(v) => sys.out.println("unexpected ${v}"),
+        Err(e) => sys.out.println("atoi failed: ${e.message()}"),
+    }
+    let f = strconv.ParseFloat("2.5", 64)?
+    sys.out.println("float: ${f * 2.0} ${strconv.FormatFloat(1.0 / 3.0, 102, 3, 64)} ${strconv.Quote("tab\there")}")
+    let ok = strconv.ParseBool("maybe").is_err()
+    sys.out.println("parse bool fails: ${ok}")
+
+    sys.out.println("sqrt ${math.Sqrt(2.0)}, pow ${math.Pow(2.0, 10.0)}, tau ${TAU}, pi ${math.Pi}")
+    sys.out.println("big ${BIG}, max ${math.MaxInt64}, min8 ${math.MinInt8}, nan ${math.IsNaN(math.NaN())}, inf ${math.Inf(1)}")
+
+    let r = unicode.ToUpper(97)
+    sys.out.println("rune ${r}, upper ${unicode.IsUpper(r)}, letter ${unicode.IsLetter(48)}, max ${unicode.MaxRune}")
+    sys.out.println("utf8 ${utf8.RuneCountInString("héllo")} ${utf8.RuneLen(128512)} ${utf8.ValidString("ok")} ${REPLACEMENT}")
+    let e = utf8.RuneError
+    sys.out.println("rune error + 1 = ${e + 1}")
+
+    let bytes: List<Byte> = [104, 105]
+    let quoted = strconv.AppendQuote(bytes, "x")
+    sys.out.println("appended: ${bytes.len()} -> ${quoted.len()}, valid ${utf8.Valid(quoted)}, ${utf8.Valid([255])}")
+    let buf: List<Byte> = [0, 0, 0, 0]
+    let size = utf8.EncodeRune(buf, 233)
+    sys.out.println("encoded ${size} bytes; the list is unchanged: ${buf.map(|b| b.to_string()).join(",")}")
+
+    let caps = [65, 97, 49].map(unicode.IsUpper)
+    sys.out.println("is upper: ${caps.map(|b| b.to_string()).join(" ")}")
+    let parse = strconv.Atoi
+    sys.out.println("parsed ${parse("7").unwrap_or(0)} ${parse("x").unwrap_or(-1)}")
+    let lower = unicode.ToLower
+    sys.out.println("lower ${lower(65)}")
+
+    let strings = ["a local", "hides the package"]
+    sys.out.println(strings.join(" "))
+    Ok(())
+}

@@ -29,11 +29,13 @@ func Check(fset *syntax.FileSet, files []*syntax.File) (*Program, []diag.Diagnos
 			Funcs:     map[*syntax.FuncDecl]*FuncObj{},
 			Consts:    map[*syntax.ConstDecl]*ConstObj{},
 			TypeDecls: map[syntax.Decl]*TypeDecl{},
+			Go:        map[syntax.Expr]*GoUse{},
 		},
 		consts: map[syntax.Expr]*Const{},
 	}
 	c.prog = &Program{Fset: fset, Files: files, Info: c.info}
 	c.collect(files)
+	c.collectUses(files)
 	c.resolveTypeDecls()
 	c.collectImpls()
 	c.resolveSignatures()
@@ -55,7 +57,7 @@ type checker struct {
 	fset    *syntax.FileSet
 	info    *Info
 	prog    *Program
-	globals map[string]any // *TypeDecl, *FuncObj or *ConstObj
+	globals map[string]any // *TypeDecl, *FuncObj, *ConstObj or *GoPkg
 
 	errs   []diag.Diagnostic // names and types
 	pats   []diag.Diagnostic // exhaustiveness and unreachable arms
@@ -180,6 +182,8 @@ func declIdent(obj any) *syntax.Ident {
 		return o.Decl.Name
 	case *ConstObj:
 		return o.Decl.Name
+	case *GoPkg:
+		return o.Ident
 	}
 	return nil
 }
@@ -220,8 +224,6 @@ func (c *checker) collect(files []*syntax.File) {
 				k.Type = c.resolveType(d.Type)
 			case *syntax.ImplDecl:
 				c.impls = append(c.impls, implInfo{decl: d})
-			case *syntax.UseDecl:
-				c.errorf("R0106", d.Span(), "`use go` is not supported in this version")
 			}
 		}
 	}

@@ -267,6 +267,28 @@ fn load(fs: Fs, path: String) -> Result<String, Error> {
 - `main` takes `sys: Sys` or nothing, and returns nothing or `Result<(), Error>` (R0604). An `Err` from `main` prints `error: <message>` to standard error and exits with status 1. A panic exits with status 2.
 - `Net` and `Proc` (network and processes) come in v0.2 (R0106).
 
+## Go packages
+
+```
+use go "strings"
+use go "strconv"
+use go "math"
+
+const TAU: Float = 2.0 * math.Pi
+
+fn main(sys: Sys) -> Result<(), Error> {
+    let words = strings.Fields(" a  b ")
+    let n = strconv.Atoi("42")?
+    sys.out.println("${words.map(strings.ToUpper).join(",")} ${n} ${math.Sqrt(TAU)}")
+    Ok(())
+}
+```
+
+- `use go "path"` imports a Go package for every file of the program. Its functions are called and its constants read through its name, `strings.Fields(s)`, `math.Pi`; constants may appear in `const`. The name is like a declaration's; a local of that name hides it.
+- Allowed: `strings`, `strconv`, `math`, `unicode`, `unicode/utf8`, which cannot reach outside the program. Any other package is R0601, which names the capability to use instead.
+- Types map from Go: `int` and `rune` to Int, `float64` to Float, `bool` to Bool, `string` to String, `byte` to Byte, `error` to Error, `[]T` to `List<T>`. A result `T` is a T, `(T, error)` a `Result<T, Error>`, `error` a `Result<(), Error>`. Anything else (other types, no result, other results, `...` parameters, Go variables and types) is R0602.
+- A rune is an Int: `unicode.IsUpper(65)`. Lists are copied into and out of Go, so Go never changes a Riddim list. A Go function is a value too: `xs.map(strings.ToUpper)`. A Go error's message is Go's: `strconv.Atoi: parsing "x": invalid syntax`.
+
 ## Warnings
 
 W0001 unused binding (the fix replaces it with `_`; names starting with `_` are exempt), W0002 `unwrap`/`expect`, W0003 `todo()`. Warnings do not stop a build.
@@ -299,8 +321,8 @@ Each Rust or Go habit below has its own error code (R0108 to R0125) and, where t
 | Go's `nil`, `if err != nil { return err }` | `None`; `?` on the call that can fail |
 | Go's `func`, `for i := 0; i < n; i++`, `for cond`, `for {` | `fn`, `for i in 0..n`, `while cond`, `loop` |
 | Go's `[]T`, `map[K]V`, `*T`, `for i, x := range xs` | `List<T>`, `Map<K, V>`, `T`, `for (i, x) in xs.enumerate()` |
-| Go's `package main`, `import "strings"`; Rust's `use std::...` | Nothing; `use go "strings"` (M3); nothing |
+| Go's `package main`, `import "strings"`; Rust's `use std::...` | Nothing; `use go "strings"`; nothing |
 
 ## Not in M2
 
-These come in later milestones; using them gives R0106 or an unknown-name error: `use go "..."` and Go packages (milestone M3). Not in v0: traits, modules and `pub`, concurrency, macros, the `Net` and `Proc` capabilities.
+Not in v0: traits, modules and `pub`, concurrency, macros, the `Net` and `Proc` capabilities (R0106), third-party Go modules (R0601).

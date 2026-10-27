@@ -1,4 +1,0 @@
-use go "strings"
-
-fn main() {
-}

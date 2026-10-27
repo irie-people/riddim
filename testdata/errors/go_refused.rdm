@@ -1,0 +1,11 @@
+use go "os"
+use go "fmt"
+use go "time"
+use go "net/http"
+use go "example.com/lib"
+use go "sort"
+use go "strings"
+
+fn main() {
+    let _ = strings.TrimSpace(" a ")
+}

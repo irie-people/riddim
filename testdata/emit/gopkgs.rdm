@@ -1,0 +1,16 @@
+use go "strconv"
+use go "unicode"
+use go "unicode/utf8"
+
+const REPLACEMENT: Int = utf8.RuneError
+
+fn count(text: String, xs: List<Byte>) -> Result<Int, Error> {
+    let n = strconv.Atoi(text)?
+    let upper = [72, 105].map(unicode.IsUpper)
+    Ok(n + utf8.RuneCount(xs) + upper.len() + unicode.ToUpper(REPLACEMENT))
+}
+
+fn main(sys: Sys) -> Result<(), Error> {
+    sys.out.println(count("1", [104]).map(|n| n.to_string()).unwrap_or("?"))
+    Ok(())
+}

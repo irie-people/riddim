@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/riddim-hq/riddim/internal/diag"
+	"github.com/riddim-hq/riddim/internal/gointerop"
 	"github.com/riddim-hq/riddim/internal/syntax"
 )
 
@@ -215,6 +216,9 @@ func (c *checker) ident(e *syntax.Ident, want Type) Type {
 			c.errorf("R0201", e.Span(), "`%s` is a struct, not a value; write a struct literal, as in `%s { ... }`", e.Name, e.Name)
 		}
 		return invalid
+	case *GoPkg:
+		c.errorf("R0201", e.Span(), "`%s` is a Go package, not a value: use its functions and constants, as in `%s.Name(...)`", e.Name, e.Name)
+		return invalid
 	}
 	switch e.Name {
 	case "None":
@@ -256,6 +260,9 @@ func (c *checker) ident(e *syntax.Ident, want Type) Type {
 	d := c.unknown(e, "name", c.valueNames())
 	if en := c.enumWithVariant(e.Name); en != "" {
 		d.Notes = append(d.Notes, fmt.Sprintf("variants are written with their enum: `%s::%s`", en, e.Name))
+	}
+	if path := gointerop.PathOf(e.Name); path != "" {
+		d.Notes = append(d.Notes, fmt.Sprintf("to use the Go package, import it: `use go %q`", path))
 	}
 	return invalid
 }
@@ -604,6 +611,9 @@ func (c *checker) call(e *syntax.CallExpr, want Type) Type {
 }
 
 func (c *checker) methodCall(e *syntax.MethodCallExpr, want Type) Type {
+	if gp := c.goPkg(e.Recv); gp != nil {
+		return c.goCall(e, gp, want)
+	}
 	rt := Resolve(c.expr(e.Recv, nil))
 	name := e.Name.Name
 	fail := func() Type {
@@ -761,6 +771,9 @@ var methodAliases = map[string]string{
 }
 
 func (c *checker) field(e *syntax.FieldExpr) Type {
+	if gp := c.goPkg(e.X); gp != nil {
+		return c.goMember(e, gp)
+	}
 	xt := Resolve(c.expr(e.X, nil))
 	name := e.Name.Name
 	if n, err := strconv.Atoi(name); err == nil {

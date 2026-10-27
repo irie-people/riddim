@@ -265,11 +265,15 @@ func compareConsts(op syntax.Kind, x, y *Const, t Type) (bool, bool) {
 }
 
 // constSyntax reports whether e is built only of literals, names and
-// operators, as a const initializer must be.
+// operators, as a const initializer must be. A name may be a Go package's
+// constant, as in `math.Pi`.
 func constSyntax(e syntax.Expr) bool {
 	switch e := e.(type) {
 	case *syntax.IntLit, *syntax.FloatLit, *syntax.StringLit, *syntax.BoolLit, *syntax.Ident:
 		return true
+	case *syntax.FieldExpr:
+		_, ok := e.X.(*syntax.Ident)
+		return ok
 	case *syntax.ParenExpr:
 		return constSyntax(e.X)
 	case *syntax.UnaryExpr:
