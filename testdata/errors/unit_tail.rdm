@@ -1,0 +1,12 @@
+fn greet(name: String) {
+    "hello " + name
+}
+
+fn count(xs: List<Int>) {
+    xs.len()
+}
+
+fn main() {
+    greet("alice")
+    count([1])
+}

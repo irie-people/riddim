@@ -173,7 +173,7 @@ let r: Result<Int, String> = Err("bad")
 - `let x = e`, `let x: T = e`, `let (a, b) = pair`, `let _ = e`. Bindings are immutable; shadowing is allowed (`let x = x + 1`).
 - `let mut x = e` may be reassigned: `x = e`, `x += e`, `-=`, `*=`, `/=`. Fields of a `let mut` struct may be assigned: `p.x = 1.0`, `line.to.y += 1.0`. List elements cannot be assigned.
 - Blocks are expressions: their value is their last expression. `if`, `match` and blocks may be used as values: `let s = if n > 0 { "pos" } else { "neg" }`. `if` without `else` has type `()`. Braces are required.
-- When a block's value is not used, its last expression is dropped like any statement.
+- A function or closure that returns `()` must end with a value of type `()` (a call that returns nothing, a loop, `if` without `else`, or a statement): `fn greet(n: String) { "hi " + n }` is an error; write `-> String`, or `let _ = e` to drop a value. Elsewhere (loop bodies, `if` without `else`, statements), a block's last expression is dropped like any statement.
 - An expression statement of type `Result` must be used: `?`, `match`, or `let _ = e` (R0502).
 - Loops: `while cond { }`, `loop { }` (has type `Never` if no `break` leaves it), `for x in list { }`, `for i in 0..n { }` (excludes n), `for i in 1..=n { }` (includes n). The pattern of `for` is a name, `_` or a tuple: `for (k, v) in pairs`. Ranges appear only in `for`. `break` and `continue` work in all three loops but not across a closure.
 - Operators, highest precedence first: unary `-` `!`; `*` `/` `%`; `+` `-`; comparisons; `&&`; `||`. `+` also joins strings. `&&` and `||` short-circuit. No bitwise operators. `%` works on Float too.

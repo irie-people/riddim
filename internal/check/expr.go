@@ -603,6 +603,8 @@ func (c *checker) methodCall(e *syntax.MethodCallExpr, want Type) Type {
 		msg := fmt.Sprintf("%s has no method `%s`", typeName, name)
 		if isLater(typeName, name) {
 			msg = fmt.Sprintf("`%s` on %s is not supported in this version", name, typeName)
+		} else if alias, ok := methodAliases[name]; ok && table[alias] != nil {
+			msg += "; did you mean `" + alias + "`?"
 		} else if close := closest(name, cands); len(close) > 0 {
 			msg += "; did you mean " + orList(close) + "?"
 		}
@@ -619,6 +621,14 @@ func (c *checker) methodCall(e *syntax.MethodCallExpr, want Type) Type {
 		c.warnf("W0002", e.Name.Span(), "%s", b.warn)
 	}
 	return c.callWith("`"+name+"`", e.Span(), e.Args, params, result, want)
+}
+
+// methodAliases are names other languages use for built-in methods.
+var methodAliases = map[string]string{
+	"length": "len", "size": "len", "count": "len",
+	"append": "push", "add": "push",
+	"unwrap_or_default": "unwrap_or",
+	"to_str": "to_string", "as_str": "to_string",
 }
 
 func (c *checker) field(e *syntax.FieldExpr) Type {

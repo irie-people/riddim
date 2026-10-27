@@ -498,6 +498,14 @@ func (p *parser) line(pos Pos) int {
 	return l
 }
 
+func isAssignOp(k Kind) bool {
+	switch k {
+	case ASSIGN, PLUSEQ, MINUSEQ, STAREQ, SLASHEQ:
+		return true
+	}
+	return false
+}
+
 func (p *parser) stmt() Stmt {
 	switch p.tok.Kind {
 	case LET:
@@ -937,6 +945,9 @@ func (p *parser) matchExpr() Expr {
 		}
 		p.expect(FATARROW, "`=>`")
 		arm.Body = p.expr()
+		if isAssignOp(p.tok.Kind) {
+			p.fail("R0105", p.tok.Span(), "an assignment is a statement, not a value: put it in a block, as in `=> { x = 1 }`")
+		}
 		m.Arms = append(m.Arms, arm)
 		if p.tok.Kind == COMMA || p.tok.Kind == TERM {
 			p.next()

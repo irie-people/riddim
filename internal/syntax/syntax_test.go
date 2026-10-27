@@ -191,6 +191,7 @@ func TestParseErrors(t *testing.T) {
 		{"fn f(x) { }", "R0105"},
 		{"struct P(Int)", "R0105"},
 		{"fn f() { foo::<Int>() }", "R0105"},
+		{"fn f() { match x { A => y = 1 } }", "R0105"},
 		// one error per declaration: recovery finds the next one
 		{"fn f() { ) }\nfn g() { ] }\nfn h() { }", "R0105 R0105"},
 	}

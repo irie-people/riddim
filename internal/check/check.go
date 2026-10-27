@@ -693,7 +693,7 @@ func (c *checker) checkFunc(fo *FuncObj) {
 // body checks the body of a function or closure against its result type.
 func (c *checker) body(b syntax.Expr, result Type, what string) {
 	if isUnit(result) {
-		c.discard(b)
+		c.unitBody(b, what)
 		return
 	}
 	blk, ok := b.(*syntax.BlockExpr)
@@ -707,6 +707,66 @@ func (c *checker) body(b syntax.Expr, result Type, what string) {
 		d := c.errorf("R0301", syntax.Span{Start: blk.Rbrace, End: blk.Rbrace + 1}, "%s returns %s, but its body ends without a value", what, Resolve(result))
 		d.Notes = append(d.Notes, "the last line of a body is its value; end with an expression or `return`")
 	}
+}
+
+// unitBody checks the body of a function that returns (): its value, the
+// last expression, must be () too. A Result there is R0502.
+func (c *checker) unitBody(b syntax.Expr, what string) {
+	blk, ok := b.(*syntax.BlockExpr)
+	if !ok {
+		c.unitTail(b, what)
+		return
+	}
+	c.pushScope()
+	defer c.popScope()
+	saved := c.dead
+	defer func() { c.dead = saved }()
+	for i, s := range blk.Stmts {
+		if es, ok := s.(*syntax.ExprStmt); ok && i == len(blk.Stmts)-1 {
+			mark := len(c.vars)
+			c.unitTail(es.X, what)
+			c.endStmt(mark)
+			break
+		}
+		if isNever(c.stmt(s)) {
+			c.dead = true
+		}
+	}
+	c.info.Types[blk] = Unit
+}
+
+func (c *checker) unitTail(e syntax.Expr, what string) {
+	var t Type
+	switch x := e.(type) {
+	case *syntax.BlockExpr:
+		c.unitBody(x, what)
+		return
+	case *syntax.IfExpr:
+		if x.Else == nil {
+			c.discard(e)
+			return
+		}
+	}
+	t = c.expr(e, nil)
+	switch r := Resolve(t).(type) {
+	case *Result:
+		c.unusedResult(e)
+	case *Var:
+		c.bind(r, Unit)
+	case *Basic:
+		if r == Unit || r == Never {
+			return
+		}
+		c.unitMismatch(e, what, t)
+	case *Invalid:
+	default:
+		c.unitMismatch(e, what, t)
+	}
+}
+
+func (c *checker) unitMismatch(e syntax.Expr, what string, t Type) {
+	d := c.errorf("R0301", e.Span(), "%s returns (), but its last expression is a %s", what, Deep(t))
+	d.Notes = append(d.Notes, fmt.Sprintf("to return it, declare the result: `-> %s`; to drop it, write `let _ = ...`", Deep(t)))
 }
 
 func hasTail(b *syntax.BlockExpr) bool {
@@ -762,7 +822,14 @@ func (c *checker) endStmt(mark int) {
 		sort.SliceStable(bad, func(i, j int) bool { return bad[i].origin.Start < bad[j].origin.Start })
 		v := bad[0]
 		d := c.errorf("R0306", v.origin, "cannot infer %s", v.what)
-		d.Notes = append(d.Notes, "Riddim infers types forward only; annotate the binding, as in `let xs: List<Int> = []`")
+		example := "`let xs: List<Int> = []`"
+		switch {
+		case strings.Contains(v.what, "`None`"):
+			example = "`let x: Option<Int> = None`"
+		case strings.Contains(v.what, "Ok") || strings.Contains(v.what, "Err"):
+			example = "`let r: Result<Int, Error> = Ok(1)`"
+		}
+		d.Notes = append(d.Notes, "Riddim infers types forward only; annotate the binding, as in "+example)
 		for _, v := range bad {
 			v.ref = invalid
 		}
