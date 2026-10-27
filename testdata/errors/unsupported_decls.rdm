@@ -1,8 +1,4 @@
 use go "strings"
 
-fn count(m: Map<String, Int>) -> Int {
-    0
-}
-
 fn main() {
 }

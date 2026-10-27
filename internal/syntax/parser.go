@@ -391,7 +391,7 @@ func (p *parser) constDecl() *ConstDecl {
 
 // ---- Types ----
 
-var laterTypes = map[string]bool{"Map": true, "Env": true, "Fs": true, "Clock": true}
+var laterTypes = map[string]bool{"Env": true, "Fs": true, "Clock": true}
 
 func (p *parser) typ() TypeExpr {
 	switch p.tok.Kind {
@@ -746,9 +746,6 @@ func (p *parser) primary() Expr {
 		p.noTurbofish()
 		if p.tok.Kind == COLON2 {
 			p.next()
-			if id.Name == "Map" {
-				p.fail("R0106", id.Span(), "`Map` is not supported in this version")
-			}
 			name := p.ident("a variant or function name after `::`")
 			if p.tok.Kind == COLON2 {
 				p.fail("R0105", p.tok.Span(), "a path has two parts, as in `Shape::Circle`")

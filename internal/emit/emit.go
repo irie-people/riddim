@@ -21,7 +21,7 @@ var runtimeSrc string
 // file name to write in //line directives for each source, so that Go's
 // messages and stack traces point at .rdm lines.
 func Program(p *check.Program, lineName func(src *syntax.Source) string) (map[string][]byte, error) {
-	e := &emitter{prog: p, info: p.Info, lineName: lineName, tuples: map[int]bool{}, globals: map[string]bool{}}
+	e := &emitter{prog: p, info: p.Info, lineName: lineName, tuples: map[int]bool{}, helpers: map[string]bool{}, globals: map[string]bool{}}
 	for _, td := range p.Types {
 		e.globals[td.Name] = true
 	}
@@ -39,7 +39,7 @@ func Program(p *check.Program, lineName func(src *syntax.Source) string) (map[st
 		}
 		out[GoFileName(f.Source.Name)] = src
 	}
-	rt, err := format.Source([]byte(runtimeSrc + e.tupleTypes()))
+	rt, err := format.Source([]byte(runtimeSrc + e.tupleTypes() + e.helperFuncs()))
 	if err != nil {
 		return nil, fmt.Errorf("runtime: %v", err)
 	}
@@ -69,6 +69,7 @@ type emitter struct {
 	info     *check.Info
 	lineName func(*syntax.Source) string
 	tuples   map[int]bool
+	helpers  map[string]bool // the onDemand helpers the program uses
 	globals  map[string]bool // Go names of top-level declarations
 
 	// per file
@@ -160,6 +161,41 @@ func (e *emitter) tupleTypes() string {
 	return b.String()
 }
 
+// onDemand are runtime helpers that use generated tuple types, so they are
+// written only into programs that use them.
+var onDemand = map[string]string{
+	"mapEntries": `
+// mapEntries is Map.entries: the entries in order.
+func mapEntries[K comparable, V any](m Map[K, V]) []Tuple_2[K, V] {
+	out := make([]Tuple_2[K, V], len(m.keys))
+	for i, k := range m.keys {
+		out[i] = Tuple_2[K, V]{k, m.vals[i]}
+	}
+	return out
+}
+`,
+}
+
+// helper records that the program uses an onDemand helper, which needs the
+// two-field tuple type.
+func (e *emitter) helper(name string) {
+	e.helpers[name] = true
+	e.tuples[2] = true
+}
+
+func (e *emitter) helperFuncs() string {
+	var names []string
+	for n := range e.helpers {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	var b strings.Builder
+	for _, n := range names {
+		b.WriteString(onDemand[n])
+	}
+	return b.String()
+}
+
 func (e *emitter) mainWrapper() string {
 	m := e.prog.Main
 	arg := ""
@@ -237,6 +273,8 @@ func (e *emitter) goType(t check.Type) string {
 		return fmt.Sprintf("Tuple_%d%s", len(t.Elems), typeArgs(e.typeList(t.Elems)))
 	case *check.List:
 		return "[]" + e.goType(t.Elem)
+	case *check.Map:
+		return "Map[" + e.goType(t.Key) + ", " + e.goType(t.Val) + "]"
 	case *check.Option:
 		return "Option[" + e.goType(t.Elem) + "]"
 	case *check.Result:

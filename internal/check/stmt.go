@@ -270,9 +270,11 @@ func (c *checker) forExpr(e *syntax.ForExpr) {
 		switch it := Resolve(c.expr(e.Iter, nil)).(type) {
 		case *List:
 			elem = it.Elem
+		case *Map:
+			elem = &Tuple{[]Type{it.Key, it.Val}}
 		case *Invalid, *Var:
 		default:
-			d := c.errorf("R0301", e.Iter.Span(), "`for` needs a List or a range `a..b`, found %s", Deep(it))
+			d := c.errorf("R0301", e.Iter.Span(), "`for` needs a List, a Map or a range `a..b`, found %s", Deep(it))
 			d.Notes = append(d.Notes, "ranges are written in the for loop itself: `for i in 0..n`")
 		}
 	}

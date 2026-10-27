@@ -1,0 +1,87 @@
+// Map<K, V>: immutable, iterated in insertion order.
+
+enum Color { Red, Green }
+
+enum Shape {
+    Circle(Float),
+    Dot,
+}
+
+struct Inventory {
+    counts: Map<String, Int>,
+}
+
+fn count_words(words: List<String>) -> Map<String, Int> {
+    let mut counts: Map<String, Int> = Map::new()
+    for w in words {
+        counts = counts.insert(w, counts.get(w).unwrap_or(0) + 1)
+    }
+    counts
+}
+
+fn show(m: Map<String, Int>) -> String {
+    let mut out = ""
+    for (k, v) in m {
+        out = out + k + "=" + v.to_string() + " "
+    }
+    out
+}
+
+fn main(sys: Sys) {
+    let counts = count_words(["b", "a", "b", "c", "a", "b"])
+    for (word, n) in counts {
+        sys.out.println("${word}: ${n}")
+    }
+    sys.out.println("${counts.len()} words, empty ${counts.is_empty()}")
+    sys.out.println(counts.get("b").unwrap_or(0).to_string())
+    sys.out.println(counts.get("z").is_none().to_string())
+    sys.out.println("${counts.contains_key("a")} ${counts.contains_key("z")}")
+    let updated = counts.insert("a", 10)
+    sys.out.println("${counts.get("a").unwrap_or(0)} ${updated.get("a").unwrap_or(0)}")
+    sys.out.println(show(updated))
+    let removed = updated.remove("b")
+    sys.out.println(show(removed) + removed.len().to_string())
+    sys.out.println(show(removed.remove("zzz")))
+    sys.out.println(show(updated))
+    sys.out.println(removed.values().fold(0, |a, b| a + b).to_string())
+    sys.out.println(removed.keys().fold("", |acc, k| acc + k))
+    for e in removed.entries() {
+        sys.out.println("${e.0} -> ${e.1}")
+    }
+    for pair in removed {
+        sys.out.println("pair ${pair.0} ${pair.1}")
+    }
+    for (k, _) in removed {
+        sys.out.println("key " + k)
+    }
+    for (_, v) in removed {
+        sys.out.println("value ${v}")
+    }
+    for _ in removed {
+        sys.out.println("entry")
+    }
+    let empty: Map<Int, String> = Map::new()
+    sys.out.println("${empty.len()} ${empty.is_empty()} ${empty.get(1).is_none()} [${show(Map::new())}]")
+    let by_pair = Map::new().insert((1, 2), "a").insert((3, 4), "b")
+    sys.out.println(by_pair.get((3, 4)).unwrap_or("?"))
+    let by_color = Map::new().insert(Color::Green, 1).insert(Color::Red, 2)
+    sys.out.println(by_color.get(Color::Red).unwrap_or(0).to_string())
+    let by_shape = Map::new().insert(Shape::Circle(1.5), "circle").insert(Shape::Dot, "dot")
+    sys.out.println(by_shape.get(Shape::Circle(1.5)).unwrap_or("?") + " " + by_shape.get(Shape::Circle(2.0)).unwrap_or("?"))
+    let mut m = Map::new().insert("x", 1)
+    for (k, v) in m {
+        m = m.insert(k + "!", v + 1)
+    }
+    sys.out.println(show(m))
+    let nested = Map::new().insert("outer", Map::new().insert("inner", 1))
+    sys.out.println(nested.get("outer").map(|inner| inner.len()).unwrap_or(0).to_string())
+    let new_map: fn() -> Map<String, Bool> = Map::new
+    sys.out.println(new_map().len().to_string())
+    let inv = Inventory { counts: Map::new().insert("apples", 3) }
+    let more = Inventory { counts: inv.counts.insert("pears", 2) }
+    sys.out.println(show(inv.counts) + "| " + show(more.counts))
+    let tuples: Map<String, (Int, Int)> = Map::new().insert("p", (1, 2))
+    for (name, (a, b)) in tuples {
+        sys.out.println("${name} ${a + b}")
+    }
+}

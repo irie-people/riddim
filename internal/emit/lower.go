@@ -549,6 +549,10 @@ func (f *fn) forLoop(x *syntax.ForExpr) {
 	if it.never {
 		return
 	}
+	if _, ok := check.Deep(f.typeOf(x.Iter)).(*check.Map); ok {
+		f.forMap(x, it)
+		return
+	}
 	switch p := x.Pat.(type) {
 	case *syntax.BindPat:
 		l := f.info.Defs[p.Name]
@@ -567,6 +571,59 @@ func (f *fn) forLoop(x *syntax.ForExpr) {
 		f.destructure(p, tmp)
 	default:
 		f.printf("for range %s {\n", it.s)
+	}
+	f.loopBody(x.Body)
+	f.printf("}\n")
+	f.terminated = false
+}
+
+// forMap lowers a for loop over a Map: over its keys in order, reading each
+// value by its position. The map is the value it had when the loop started.
+func (f *fn) forMap(x *syntax.ForExpr, it value) {
+	m := it.s
+	if !it.local || !it.stable {
+		m = f.temp("m")
+		f.printf("%s := %s\n", m, it.s)
+	}
+	idx, key := "_", "_"
+	var bind []func()
+	switch p := x.Pat.(type) {
+	case *syntax.BindPat:
+		if l := f.info.Defs[p.Name]; l.Used {
+			idx, key = f.temp("i"), f.temp("k")
+			bind = append(bind, func() {
+				f.printf("%s := %s{%s, %s.vals[%s]}\n", f.bind(l), f.goType(l.Type), key, m, idx)
+			})
+		}
+	case *syntax.TuplePat:
+		switch kp := p.Elems[0].(type) {
+		case *syntax.BindPat:
+			if l := f.info.Defs[kp.Name]; l.Used {
+				key = f.bind(l)
+			}
+		default:
+			if bindsNames(kp) {
+				key = f.temp("k")
+				bind = append(bind, func() { f.destructure(kp, key) })
+			}
+		}
+		if vp := p.Elems[1]; bindsNames(vp) {
+			idx = f.temp("i")
+			bind = append(bind, func() { f.destructure(vp, m+".vals["+idx+"]") })
+		}
+	}
+	switch {
+	case idx == "_" && key == "_":
+		f.printf("for range %s.keys {\n", m)
+	case idx == "_":
+		f.printf("for _, %s := range %s.keys {\n", key, m)
+	case key == "_":
+		f.printf("for %s := range %s.keys {\n", idx, m)
+	default:
+		f.printf("for %s, %s := range %s.keys {\n", idx, key, m)
+	}
+	for _, b := range bind {
+		b()
 	}
 	f.loopBody(x.Body)
 	f.printf("}\n")
@@ -818,6 +875,9 @@ func (f *fn) path(x *syntax.PathExpr) value {
 		return value{s: fmt.Sprintf("func(%s) %s {\nreturn %s{%s}\n}", strings.Join(params, ", "), f.goType(ft.Result), vt, strings.Join(inits, ", ")), stable: true}
 	case check.UseAssoc:
 		return f.funcValue(use.Func.Recv.Name+"_"+use.Func.Name, use.Func, use.TypeArgs, f.typeOf(x))
+	case check.UseMapNew:
+		t := "Map" + typeArgs(f.typeList(use.TypeArgs))
+		return value{s: "func() " + t + " {\nreturn " + t + "{}\n}", stable: true}
 	}
 	return value{s: "nil"}
 }
@@ -862,6 +922,8 @@ func (f *fn) call(x *syntax.CallExpr) value {
 				}
 			}
 			return value{s: f.variantType(v, use.TypeArgs) + "{" + strings.Join(inits, ", ") + "}", concrete: true}
+		case check.UseMapNew:
+			return value{s: "Map" + typeArgs(f.typeList(use.TypeArgs)) + "{}", stable: true}
 		case check.UseSome:
 			return value{s: "Some[" + f.goType(use.TypeArgs[0]) + "](" + args + ")"}
 		case check.UseOk:
@@ -935,6 +997,25 @@ func (f *fn) builtin(mu *check.MethodUse, recv value, args []value) value {
 		return call("listFilter")
 	case "list.fold":
 		return call("listFold")
+	case "map.len":
+		return value{s: "len(" + r + ".keys)"}
+	case "map.is_empty":
+		return value{s: "len(" + r + ".keys) == 0", op: true}
+	case "map.get":
+		return call("mapGet")
+	case "map.contains_key":
+		return call("mapContainsKey")
+	case "map.insert":
+		return call("mapInsert")
+	case "map.remove":
+		return call("mapRemove")
+	case "map.keys":
+		return value{s: r + ".keys", stable: recv.stable}
+	case "map.values":
+		return value{s: r + ".vals", stable: recv.stable}
+	case "map.entries":
+		f.helper("mapEntries")
+		return call("mapEntries")
 	case "option.is_some":
 		return value{s: r + ".some"}
 	case "option.is_none":

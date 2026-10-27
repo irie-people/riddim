@@ -1,0 +1,17 @@
+fn main() {
+    let m: Map<List<Int>, Int> = Map::new()
+    let n = Map::new()
+    let k = Map::new().insert([1], 2)
+    let bad = Map::create()
+    let good: Map<String, Int> = Map::new()
+    let same = good == good
+    let _ = m
+    let _ = n
+    let _ = k
+    let _ = bad
+    let _ = same
+}
+
+struct Index<T> {
+    by_key: Map<T, Int>,
+}

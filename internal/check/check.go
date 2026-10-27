@@ -37,6 +37,8 @@ func Check(fset *syntax.FileSet, files []*syntax.File) (*Program, []diag.Diagnos
 	c.resolveTypeDecls()
 	c.collectImpls()
 	c.resolveSignatures()
+	c.declsDone = true
+	c.checkKeys()
 	c.checkRecursive()
 	for _, k := range c.prog.Consts {
 		c.checkConst(k)
@@ -79,6 +81,17 @@ type checker struct {
 
 	trail  []*Var
 	trying int
+
+	// Map key types to check once their types are known: those written in
+	// declarations wait until every declaration is resolved, those inferred
+	// for Map::new() until the end of the function.
+	keyChecks []keyCheck
+	declsDone bool
+}
+
+type keyCheck struct {
+	key Type
+	sp  syntax.Span
 }
 
 type implInfo struct {
@@ -411,7 +424,7 @@ func (c *checker) leaveSig() {
 }
 
 func (c *checker) typeNames() []string {
-	names := []string{"Int", "Float", "Bool", "String", "Byte", "List", "Option", "Result", "Error", "Never", "Sys", "Out"}
+	names := []string{"Int", "Float", "Bool", "String", "Byte", "List", "Map", "Option", "Result", "Error", "Never", "Sys", "Out"}
 	for name, g := range c.globals {
 		if _, ok := g.(*TypeDecl); ok {
 			names = append(names, name)
@@ -497,12 +510,22 @@ func (c *checker) resolveNamed(t *syntax.NamedType) Type {
 			return &List{args[0]}
 		}
 		return &Option{args[0]}
+	case "Map":
+		if !arity(2) {
+			return invalid
+		}
+		if !c.declsDone {
+			c.keyChecks = append(c.keyChecks, keyCheck{args[0], t.Args[0].Span()})
+		} else if !c.mapKey(args[0], t.Args[0].Span()) {
+			return invalid
+		}
+		return &Map{args[0], args[1]}
 	case "Result":
 		if !arity(2) {
 			return invalid
 		}
 		return &Result{args[0], args[1]}
-	case "Map", "Env", "Fs", "Clock":
+	case "Env", "Fs", "Clock":
 		return invalid // the parser reported R0106
 	case "Self":
 		if c.selfType == nil {
@@ -605,10 +628,32 @@ func containsByValue(t Type, target *TypeDecl, seen map[string]bool, depth int) 
 		}
 	case *Option:
 		return containsByValue(t.Elem, target, seen, depth+1)
+	case *Map:
+		return containsByValue(t.Key, target, seen, depth+1) || containsByValue(t.Val, target, seen, depth+1)
 	case *Result:
 		return containsByValue(t.Ok, target, seen, depth+1) || containsByValue(t.Err, target, seen, depth+1)
 	}
 	return false
+}
+
+// mapKey reports a Map key type that == does not work on (R0305): the
+// runtime's map needs comparable keys.
+func (c *checker) mapKey(k Type, sp syntax.Span) bool {
+	t := Deep(k)
+	if isInvalid(t) || hasVars(t) || comparable(t, nil) {
+		return true
+	}
+	d := c.errorf("R0305", sp, "the keys of a Map must be comparable with ==, and %s is not", t)
+	d.Notes = append(d.Notes, "keys may be Int, Float, Bool, String or Byte, or tuples, structs, enums, Option and Result made of them; a type parameter is not comparable in this version")
+	return false
+}
+
+// checkKeys checks the Map key types waiting in c.keyChecks.
+func (c *checker) checkKeys() {
+	for _, k := range c.keyChecks {
+		c.mapKey(k.key, k.sp)
+	}
+	c.keyChecks = nil
 }
 
 // checkMain checks that there is exactly one main with a supported
@@ -684,6 +729,7 @@ func (c *checker) checkFunc(fo *FuncObj) {
 	}
 	c.body(fo.Decl.Body, fo.Result, "`"+fo.Name+"`")
 	c.endStmt(0)
+	c.checkKeys()
 	for _, m := range c.matches {
 		c.checkMatch(m)
 	}
@@ -825,6 +871,8 @@ func (c *checker) endStmt(mark int) {
 		d := c.errorf("R0306", v.origin, "cannot infer %s", v.what)
 		example := "`let xs: List<Int> = []`"
 		switch {
+		case strings.Contains(v.what, "`Map::new()`"):
+			example = "`let m: Map<String, Int> = Map::new()`"
 		case strings.Contains(v.what, "`None`"):
 			example = "`let x: Option<Int> = None`"
 		case strings.Contains(v.what, "Ok") || strings.Contains(v.what, "Err"):

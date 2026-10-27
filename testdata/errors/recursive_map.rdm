@@ -1,0 +1,12 @@
+struct Dir {
+    name: String,
+    children: Map<String, Dir>,
+}
+
+enum Tree {
+    Node(Map<String, Tree>),
+    Leaf,
+}
+
+fn main() {
+}

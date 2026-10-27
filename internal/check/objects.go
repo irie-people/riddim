@@ -172,6 +172,7 @@ const (
 	UseError // error(msg)
 	UsePanic
 	UseTodo
+	UseMapNew // Map::new; TypeArgs: [K, V]
 )
 
 // A Use is the meaning of a name or path in an expression.

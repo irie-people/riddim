@@ -354,6 +354,12 @@ func (c *checker) pathType(id *syntax.Ident) (*TypeDecl, []Type, bool) {
 // path checks Type::name used as a value; called is set when it is the
 // function of a call, which reports arguments itself.
 func (c *checker) path(e *syntax.PathExpr, want Type, called bool) Type {
+	if e.Type.Name == "Map" {
+		if m := c.mapNew(e, want); m != nil {
+			return &Func{nil, m}
+		}
+		return invalid
+	}
 	td, targs, ok := c.pathType(e.Type)
 	if !ok {
 		return invalid
@@ -408,6 +414,31 @@ func (c *checker) path(e *syntax.PathExpr, want Type, called bool) Type {
 	}
 	c.errorf("R0201", e.Name.Span(), "%s", msg)
 	return invalid
+}
+
+// mapNew checks Map::new, the one associated function of Map, where a Map
+// of type want is expected (want may be nil or a function returning one). It
+// returns the map's type, or nil after an error.
+func (c *checker) mapNew(e *syntax.PathExpr, want Type) *Map {
+	if e.Name.Name != "new" {
+		c.errorf("R0201", e.Name.Span(), "`Map` has no associated function `%s`: make an empty map with `Map::new()` and add entries with `insert`", e.Name.Name)
+		return nil
+	}
+	w := Resolve(want)
+	if f, ok := w.(*Func); ok && len(f.Params) == 0 {
+		w = Resolve(f.Result)
+	}
+	m, ok := w.(*Map)
+	if !ok {
+		if isInvalid(w) {
+			m = &Map{invalid, invalid}
+		} else {
+			m = &Map{c.newVar(e.Span(), "the key type of `Map::new()`"), c.newVar(e.Span(), "the value type of `Map::new()`")}
+			c.keyChecks = append(c.keyChecks, keyCheck{m.Key, e.Span()})
+		}
+	}
+	c.info.Uses[e] = &Use{Kind: UseMapNew, TypeArgs: []Type{m.Key, m.Val}}
+	return m
 }
 
 func isClosure(e syntax.Expr) bool {
@@ -520,6 +551,18 @@ func (c *checker) call(e *syntax.CallExpr, want Type) Type {
 			return invalid
 		}
 	case *syntax.PathExpr:
+		if fun.Type.Name == "Map" {
+			m := c.mapNew(fun, want)
+			if m == nil {
+				for _, a := range e.Args {
+					c.expr(a, nil)
+				}
+				return invalid
+			}
+			c.info.Types[fun] = &Func{nil, m}
+			c.args("`Map::new`", e.Span(), e.Args, nil)
+			return m
+		}
 		t := c.path(fun, nil, true)
 		c.info.Types[fun] = t
 		use := c.info.Uses[fun]
@@ -637,6 +680,8 @@ func (c *checker) methodCall(e *syntax.MethodCallExpr, want Type) Type {
 var methodAliases = map[string]string{
 	"length": "len", "size": "len", "count": "len",
 	"append": "push", "add": "push",
+	"contains": "contains_key", "has": "contains_key", "has_key": "contains_key",
+	"put": "insert", "set": "insert", "delete": "remove", "items": "entries",
 	"unwrap_or_default": "unwrap_or",
 	"to_str":            "to_string", "as_str": "to_string",
 }

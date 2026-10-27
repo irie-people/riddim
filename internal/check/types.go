@@ -52,6 +52,8 @@ type (
 	Tuple struct{ Elems []Type }
 	// List is List<T>.
 	List struct{ Elem Type }
+	// Map is Map<K, V>.
+	Map struct{ Key, Val Type }
 	// Option is Option<T>.
 	Option struct{ Elem Type }
 	// Result is Result<T, E>.
@@ -90,6 +92,7 @@ var invalid = &Invalid{}
 func (*Basic) isType()     {}
 func (*Tuple) isType()     {}
 func (*List) isType()      {}
+func (*Map) isType()       {}
 func (*Option) isType()    {}
 func (*Result) isType()    {}
 func (*Func) isType()      {}
@@ -101,6 +104,7 @@ func (*Invalid) isType()   {}
 
 func (t *Basic) String() string  { return t.name }
 func (t *List) String() string   { return "List<" + t.Elem.String() + ">" }
+func (t *Map) String() string    { return "Map<" + t.Key.String() + ", " + t.Val.String() + ">" }
 func (t *Option) String() string { return "Option<" + t.Elem.String() + ">" }
 func (t *Result) String() string { return "Result<" + t.Ok.String() + ", " + t.Err.String() + ">" }
 func (t *Cap) String() string    { return t.Name }
@@ -156,6 +160,8 @@ func Deep(t Type) Type {
 		return &Tuple{deepList(t.Elems)}
 	case *List:
 		return &List{Deep(t.Elem)}
+	case *Map:
+		return &Map{Deep(t.Key), Deep(t.Val)}
 	case *Option:
 		return &Option{Deep(t.Elem)}
 	case *Result:
@@ -192,6 +198,8 @@ func subst(t Type, m map[*TypeParam]Type) Type {
 		return &Tuple{substList(t.Elems, m)}
 	case *List:
 		return &List{subst(t.Elem, m)}
+	case *Map:
+		return &Map{subst(t.Key, m), subst(t.Val, m)}
 	case *Option:
 		return &Option{subst(t.Elem, m)}
 	case *Result:
@@ -244,6 +252,8 @@ func hasVars(t Type) bool {
 		return anyVars(t.Elems)
 	case *List:
 		return hasVars(t.Elem)
+	case *Map:
+		return hasVars(t.Key) || hasVars(t.Val)
 	case *Option:
 		return hasVars(t.Elem)
 	case *Result:
@@ -277,6 +287,8 @@ func occurs(v *Var, t Type) bool {
 		}
 	case *List:
 		return occurs(v, t.Elem)
+	case *Map:
+		return occurs(v, t.Key) || occurs(v, t.Val)
 	case *Option:
 		return occurs(v, t.Elem)
 	case *Result:
@@ -322,6 +334,9 @@ func (c *checker) unify(a, b Type) bool {
 	case *List:
 		b, ok := b.(*List)
 		return ok && c.unify(a.Elem, b.Elem)
+	case *Map:
+		b, ok := b.(*Map)
+		return ok && c.unify(a.Key, b.Key) && c.unify(a.Val, b.Val)
 	case *Option:
 		b, ok := b.(*Option)
 		return ok && c.unify(a.Elem, b.Elem)
@@ -426,7 +441,7 @@ func comparable(t Type, seen map[*TypeDecl]bool) bool {
 	case *Var, *Invalid:
 		return true
 	}
-	return false // List, functions, capabilities, type parameters
+	return false // List, Map, functions, capabilities, type parameters
 }
 
 // ordered reports whether <, <=, > and >= work on t.

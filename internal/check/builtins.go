@@ -27,6 +27,24 @@ var listMethods = map[string]*builtin{
 	}},
 }
 
+var mapMethods = map[string]*builtin{
+	"len":      {key: "map.len", sig: func(r, o []Type) ([]Type, Type) { return nil, Int }},
+	"is_empty": {key: "map.is_empty", sig: func(r, o []Type) ([]Type, Type) { return nil, Bool }},
+	"get":      {key: "map.get", sig: func(r, o []Type) ([]Type, Type) { return []Type{r[0]}, &Option{r[1]} }},
+	"contains_key": {key: "map.contains_key", sig: func(r, o []Type) ([]Type, Type) {
+		return []Type{r[0]}, Bool
+	}},
+	"insert": {key: "map.insert", sig: func(r, o []Type) ([]Type, Type) {
+		return []Type{r[0], r[1]}, &Map{r[0], r[1]}
+	}},
+	"remove": {key: "map.remove", sig: func(r, o []Type) ([]Type, Type) { return []Type{r[0]}, &Map{r[0], r[1]} }},
+	"keys":   {key: "map.keys", sig: func(r, o []Type) ([]Type, Type) { return nil, &List{r[0]} }},
+	"values": {key: "map.values", sig: func(r, o []Type) ([]Type, Type) { return nil, &List{r[1]} }},
+	"entries": {key: "map.entries", sig: func(r, o []Type) ([]Type, Type) {
+		return nil, &List{&Tuple{[]Type{r[0], r[1]}}}
+	}},
+}
+
 var optionMethods = map[string]*builtin{
 	"is_some":   {key: "option.is_some", sig: func(r, o []Type) ([]Type, Type) { return nil, Bool }},
 	"is_none":   {key: "option.is_none", sig: func(r, o []Type) ([]Type, Type) { return nil, Bool }},
@@ -109,6 +127,8 @@ func methodsOf(t Type) (map[string]*builtin, []Type, string) {
 	switch t := t.(type) {
 	case *List:
 		return listMethods, []Type{t.Elem}, "List"
+	case *Map:
+		return mapMethods, []Type{t.Key, t.Val}, "Map"
 	case *Option:
 		return optionMethods, []Type{t.Elem}, "Option"
 	case *Result:
