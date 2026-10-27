@@ -15,6 +15,8 @@ Riddim is written from public documentation and public open-source projects. Eve
 | 2026-10-27 | https://www.apache.org/licenses/LICENSE-2.0.txt | License text (LICENSE) |
 | 2026-10-27 | Go standard library: `go doc encoding/json.Marshal`; `$GOROOT/src/encoding/json/encode.go` (fields sorted by index) | Diagnostics JSON keys come from struct tags in struct order, so `internal/diag` keeps the field order of DESIGN §7.1 |
 | 2026-10-27 | Go standard library: `go doc unicode/utf8` (`RuneCount`, `DecodeRune`) | Columns counted in code points and invalid UTF-8 detection in the lexer (`internal/syntax`, `internal/diag`) |
+| 2026-10-27 | The Go Programming Language Specification, `$GOROOT/doc/go_spec.html` (Method declarations) | A struct's method and field names must be distinct in Go, so the checker reports a field and a method with one name (R0202) instead of emitting Go that cannot compile (`internal/check`) |
+| 2026-10-27 | The Go Programming Language Specification, `$GOROOT/doc/go_spec.html` (Arithmetic operators, Constant expressions, Representability) | Go rejects division by a constant zero and typed constants that overflow, so the checker folds Riddim constant expressions and reports those cases as R0308 (`internal/check/consts.go`) |
 
 ### Ideas from prior knowledge
 
@@ -25,7 +27,7 @@ These shaped the design but were not re-read for it. A build session that relies
 | The Rust Reference, https://doc.rust-lang.org/reference/ | Syntax that models already know: `match`, `Option`, `Result`, `?`, `impl`, closures (DESIGN §4) |
 | The Go Programming Language Specification, https://go.dev/ref/spec | Semicolons from newlines, the model for §4.1 |
 | Go compiler directives, https://pkg.go.dev/cmd/compile | `//line` directives (DESIGN §6) |
-| L. Maranget, "Warnings for pattern matching", Journal of Functional Programming, 2007 | Exhaustiveness and unreachable-arm checking with example missing patterns (DESIGN §4.6) |
+| L. Maranget, "Warnings for pattern matching", Journal of Functional Programming, 2007 | Exhaustiveness and unreachable-arm checking with example missing patterns (DESIGN §4.6). M1 implements the usefulness algorithm in `internal/check/exhaust.go` from prior knowledge: the M1 build session could read only this repository and Go's own docs and source |
 | Hylo, https://www.hylo-lang.org/ ; Swift's copy-on-write collections | Mutable value semantics: values instead of shared references (DESIGN §4.8) |
 | Reinking, Xie, de Moura, Leijen, "Perceus: Garbage Free Reference Counting with Reuse", PLDI 2021 | Reusing storage in place when a value is not shared (DESIGN §4.8) |
 | Pony, https://www.ponylang.io/ ; object-capability security | The root capability handed to `main` (DESIGN §5) |
