@@ -1,0 +1,50 @@
+/// The largest number of retries.
+const MAX_RETRIES: Int = 3
+
+/// A point in the plane.
+///
+/// Both coordinates are in metres.
+struct Point {
+    /// Distance east of the origin.
+    x: Float,
+    /// Distance north of the origin.
+    y: Float,
+}
+
+/// A shape.
+enum Shape {
+    /// A circle around the origin.
+    Circle(radius: Float),
+    /// Nothing at all.
+    Empty,
+}
+
+/// Primary colours.
+enum Color {
+    /// The colour of blood.
+    Red,
+    Blue,
+}
+
+/// Geometry on points.
+impl Point {
+    /// The distance from the origin.
+    fn norm(self) -> Float {
+        (self.x * self.x + self.y * self.y).sqrt()
+    }
+}
+
+/// Runs the example.
+///line this is not a directive
+//// four slashes: a plain comment
+fn main(sys: Sys) {
+    /// inside a body: a plain comment
+    let p = Point { x: 3.0, y: 4.0 } /// after code: a plain comment
+    let c = Color::Red
+    let s = Shape::Circle(1.0)
+    let r = match s {
+        Circle(r) => r,
+        Empty => 0.0,
+    }
+    sys.out.println("${p.norm()} ${MAX_RETRIES} ${c == Color::Blue} ${r}")
+}

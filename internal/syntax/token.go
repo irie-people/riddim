@@ -131,9 +131,10 @@ func (k Kind) IsKeyword() bool { return k > keywordsStart && k < keywordsEnd }
 type Token struct {
 	Kind     Kind
 	Pos, End Pos
-	Text     string // identifier name or literal source; for STRING, the decoded value
-	Implicit bool   // a TERM made from a newline
-	NL       bool   // a newline comes between this token and the one before
+	Text     string   // identifier name or literal source; for STRING, the decoded value
+	Implicit bool     // a TERM made from a newline
+	NL       bool     // a newline comes between this token and the one before
+	Doc      []string // the /// comment lines just before the token, without the ///
 }
 
 // Span returns the token's span.

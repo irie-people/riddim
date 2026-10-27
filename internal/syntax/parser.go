@@ -203,6 +203,7 @@ func (p *parser) typeParams() []*Ident {
 }
 
 func (p *parser) funcDecl(inImpl bool) *FuncDecl {
+	doc := p.tok.Doc
 	fn := p.expect(FN, "`fn`").Pos
 	name := p.ident("a function name")
 	tps := p.typeParams()
@@ -253,10 +254,11 @@ func (p *parser) funcDecl(inImpl bool) *FuncDecl {
 	p.loops = 0
 	body := p.block()
 	p.loops = saved
-	return &FuncDecl{Fn: fn, Name: name, TypeParams: tps, Params: params, Result: result, Body: body}
+	return &FuncDecl{Doc: doc, Fn: fn, Name: name, TypeParams: tps, Params: params, Result: result, Body: body}
 }
 
 func (p *parser) structDecl() *StructDecl {
+	doc := p.tok.Doc
 	pos := p.expect(STRUCT, "`struct`").Pos
 	name := p.ident("a struct name")
 	tps := p.typeParams()
@@ -273,12 +275,13 @@ func (p *parser) structDecl() *StructDecl {
 		if p.tok.Kind == RBRACE {
 			break
 		}
+		fdoc := p.tok.Doc
 		fname := p.ident("a field name or `}`")
 		if p.tok.Kind != COLON {
 			p.fail("R0105", fname.Span(), "field `%s` needs a type, as in `%s: Int`", fname.Name, fname.Name)
 		}
 		p.next()
-		fields = append(fields, &FieldDecl{Name: fname, Type: p.typ()})
+		fields = append(fields, &FieldDecl{Doc: fdoc, Name: fname, Type: p.typ()})
 		if p.tok.Kind == COMMA || p.tok.Kind == TERM {
 			p.next()
 			continue
@@ -289,10 +292,11 @@ func (p *parser) structDecl() *StructDecl {
 	}
 	rb := p.tok.Pos
 	p.next()
-	return &StructDecl{Struct: pos, Name: name, TypeParams: tps, Fields: fields, Rbrace: rb}
+	return &StructDecl{Doc: doc, Struct: pos, Name: name, TypeParams: tps, Fields: fields, Rbrace: rb}
 }
 
 func (p *parser) enumDecl() *EnumDecl {
+	doc := p.tok.Doc
 	pos := p.expect(ENUM, "`enum`").Pos
 	name := p.ident("an enum name")
 	tps := p.typeParams()
@@ -303,7 +307,8 @@ func (p *parser) enumDecl() *EnumDecl {
 		if p.tok.Kind == RBRACE {
 			break
 		}
-		v := &VariantDecl{Name: p.ident("a variant name or `}`")}
+		v := &VariantDecl{Doc: p.tok.Doc}
+		v.Name = p.ident("a variant name or `}`")
 		switch p.tok.Kind {
 		case LBRACE:
 			p.fail("R0105", p.tok.Span(), "variant fields go in parentheses, as in `%s(x: Int)`", v.Name.Name)
@@ -346,10 +351,11 @@ func (p *parser) enumDecl() *EnumDecl {
 	}
 	rb := p.tok.Pos
 	p.next()
-	return &EnumDecl{Enum: pos, Name: name, TypeParams: tps, Variants: variants, Rbrace: rb}
+	return &EnumDecl{Doc: doc, Enum: pos, Name: name, TypeParams: tps, Variants: variants, Rbrace: rb}
 }
 
 func (p *parser) implDecl() *ImplDecl {
+	doc := p.tok.Doc
 	pos := p.expect(IMPL, "`impl`").Pos
 	tps := p.typeParams()
 	t := p.typ()
@@ -374,10 +380,11 @@ func (p *parser) implDecl() *ImplDecl {
 	}
 	rb := p.tok.Pos
 	p.next()
-	return &ImplDecl{Impl: pos, TypeParams: tps, Type: nt, Methods: methods, Rbrace: rb}
+	return &ImplDecl{Doc: doc, Impl: pos, TypeParams: tps, Type: nt, Methods: methods, Rbrace: rb}
 }
 
 func (p *parser) constDecl() *ConstDecl {
+	doc := p.tok.Doc
 	pos := p.expect(CONST, "`const`").Pos
 	name := p.ident("a constant name")
 	if p.tok.Kind != COLON {
@@ -386,7 +393,7 @@ func (p *parser) constDecl() *ConstDecl {
 	p.next()
 	t := p.typ()
 	p.expect(ASSIGN, "`=`")
-	return &ConstDecl{Const: pos, Name: name, Type: t, Value: p.expr()}
+	return &ConstDecl{Doc: doc, Const: pos, Name: name, Type: t, Value: p.expr()}
 }
 
 // ---- Types ----

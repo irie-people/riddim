@@ -27,6 +27,7 @@ type lexer struct {
 	toks   []Token
 	diags  []diag.Diagnostic
 	interp []interpFrame // the `${` open around lx.off, innermost last
+	docs   []string      // /// lines waiting for the next token
 }
 
 // An interpFrame is an open `${` in a string: depth counts the `{` opened
@@ -41,8 +42,9 @@ func (lx *lexer) errorf(code string, start, end int, format string, args ...any)
 }
 
 func (lx *lexer) emit(k Kind, start int, text string) {
-	lx.toks = append(lx.toks, Token{Kind: k, Pos: lx.src.Pos(start), End: lx.src.Pos(lx.off), Text: text, NL: lx.nl})
+	lx.toks = append(lx.toks, Token{Kind: k, Pos: lx.src.Pos(start), End: lx.src.Pos(lx.off), Text: text, NL: lx.nl, Doc: lx.docs})
 	lx.nl = false
+	lx.docs = nil
 }
 
 func (lx *lexer) run() {
@@ -114,8 +116,14 @@ func (lx *lexer) skipSpace() {
 		case c == ' ' || c == '\t' || c == '\r':
 			lx.off++
 		case c == '/' && lx.off+1 < len(lx.b) && lx.b[lx.off+1] == '/':
+			start := lx.off
 			for lx.off < len(lx.b) && lx.b[lx.off] != '\n' {
 				lx.off++
+			}
+			// A /// comment that starts a line documents the next declaration.
+			text := string(lx.b[start:lx.off])
+			if strings.HasPrefix(text, "///") && !strings.HasPrefix(text, "////") && (lx.nl || len(lx.toks) == 0) {
+				lx.docs = append(lx.docs, strings.TrimRight(text[3:], " \t\r"))
 			}
 		default:
 			return

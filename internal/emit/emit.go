@@ -104,6 +104,11 @@ func (e *emitter) file(f *syntax.File) ([]byte, error) {
 		case *syntax.FuncDecl:
 			e.funcDecl(e.info.Funcs[d])
 		case *syntax.ImplDecl:
+			if len(d.Doc) > 0 {
+				// Go has no impl blocks: the comment stands alone above the methods.
+				e.doc(d.Doc)
+				e.printf("\n")
+			}
 			for _, m := range d.Methods {
 				e.funcDecl(e.info.Funcs[m])
 			}
@@ -349,24 +354,43 @@ func fieldName(f *check.Field) string {
 
 // ---- Declarations ----
 
+// doc writes a /// comment as a Go comment, above the //line directive of
+// its declaration so that Go reads it as the declaration's doc comment. A
+// space after // keeps a line such as `///line x` from becoming a directive.
+func (e *emitter) doc(lines []string) {
+	for _, l := range lines {
+		if l = strings.TrimPrefix(l, " "); l == "" {
+			e.printf("//\n")
+		} else {
+			e.printf("// %s\n", l)
+		}
+	}
+}
+
 func (e *emitter) structDecl(td *check.TypeDecl) {
+	d := td.Decl.(*syntax.StructDecl)
+	e.doc(d.Doc)
 	e.line(td.Ident.NamePos)
 	if len(td.Fields) == 0 {
 		e.printf("type %s%s struct{}\n", td.Name, tparamList(td.TParams))
 		return
 	}
 	e.printf("type %s%s struct {\n", td.Name, tparamList(td.TParams))
-	for _, f := range td.Fields {
+	for i, f := range td.Fields {
+		e.doc(d.Fields[i].Doc)
 		e.printf("%s %s\n", fieldName(f), e.goType(f.Type))
 	}
 	e.printf("}\n")
 }
 
 func (e *emitter) enumDecl(td *check.TypeDecl) {
+	d := td.Decl.(*syntax.EnumDecl)
+	e.doc(d.Doc)
 	e.line(td.Ident.NamePos)
 	if td.Fieldless() {
 		e.printf("type %s int\n\nconst (\n", td.Name)
 		for i, v := range td.Variants {
+			e.doc(d.Variants[i].Doc)
 			if i == 0 {
 				e.printf("%s_%s %s = iota\n", td.Name, v.Name, td.Name)
 			} else {
@@ -380,12 +404,14 @@ func (e *emitter) enumDecl(td *check.TypeDecl) {
 	args := typeArgs(tparamNames(td.TParams))
 	marker := "is" + td.Name
 	e.printf("type %s%s interface {\n%s()\n}\n", td.Name, tps, marker)
-	for _, v := range td.Variants {
+	for i, v := range td.Variants {
+		e.printf("\n")
+		e.doc(d.Variants[i].Doc)
 		if len(v.Fields) == 0 {
-			e.printf("\ntype %s_%s%s struct{}\n", td.Name, v.Name, tps)
+			e.printf("type %s_%s%s struct{}\n", td.Name, v.Name, tps)
 			continue
 		}
-		e.printf("\ntype %s_%s%s struct {\n", td.Name, v.Name, tps)
+		e.printf("type %s_%s%s struct {\n", td.Name, v.Name, tps)
 		for _, f := range v.Fields {
 			e.printf("%s %s\n", fieldName(f), e.goType(f.Type))
 		}
@@ -398,6 +424,7 @@ func (e *emitter) enumDecl(td *check.TypeDecl) {
 }
 
 func (e *emitter) constDecl(k *check.ConstObj) {
+	e.doc(k.Decl.Doc)
 	e.line(k.Decl.Const)
 	f := e.newFunc(nil)
 	e.printf("const %s %s = %s\n", k.Name, e.goType(k.Type), f.exprVal(k.Decl.Value))
@@ -416,6 +443,7 @@ func (e *emitter) funcDecl(fo *check.FuncObj) {
 	if fo == e.prog.Main {
 		name = "main_"
 	}
+	e.doc(fo.Decl.Doc)
 	e.line(fo.Decl.Fn)
 	switch {
 	case fo.Recv == nil:

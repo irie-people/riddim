@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -227,5 +230,66 @@ func TestEmit(t *testing.T) {
 				t.Errorf("generated Go differs from %s (run go test -update to accept)\n%s", golden, got)
 			}
 		})
+	}
+}
+
+// TestDocComments checks that /// comments reach the generated Go as doc
+// comments that Go itself reads, without the //line directives.
+func TestDocComments(t *testing.T) {
+	path := filepath.Join(root, "testdata", "emit", "docs.rdm")
+	src, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	u := FromSources(".", map[string][]byte{"docs.rdm": src})
+	if ds := u.Check(); diag.HasErrors(ds) {
+		t.Fatalf("errors: %s", summary(ds))
+	}
+	files, err := emit.Program(u.Prog, func(s *syntax.Source) string { return s.Name })
+	if err != nil {
+		t.Fatal(err)
+	}
+	gf, err := parser.ParseFile(token.NewFileSet(), "docs.rdm.go", files["docs.rdm.go"], parser.ParseComments)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]string{}
+	for _, d := range gf.Decls {
+		switch d := d.(type) {
+		case *ast.FuncDecl:
+			got[d.Name.Name] = d.Doc.Text()
+		case *ast.GenDecl:
+			for _, s := range d.Specs {
+				switch s := s.(type) {
+				case *ast.TypeSpec:
+					got[s.Name.Name] = d.Doc.Text()
+					if st, ok := s.Type.(*ast.StructType); ok {
+						for _, f := range st.Fields.List {
+							got[s.Name.Name+"."+f.Names[0].Name] = f.Doc.Text()
+						}
+					}
+				case *ast.ValueSpec:
+					got[s.Names[0].Name] = d.Doc.Text() + s.Doc.Text()
+				}
+			}
+		}
+	}
+	want := map[string]string{
+		"MAX_RETRIES":  "The largest number of retries.\n",
+		"Point":        "A point in the plane.\n\nBoth coordinates are in metres.\n",
+		"Point.x":      "Distance east of the origin.\n",
+		"Shape":        "A shape.\n",
+		"Shape_Circle": "A circle around the origin.\n",
+		"Shape_Empty":  "Nothing at all.\n",
+		"Color":        "Primary colours.\n",
+		"Color_Red":    "The colour of blood.\n",
+		"Color_Blue":   "",
+		"norm":         "The distance from the origin.\n",
+		"main_":        "Runs the example.\nline this is not a directive\n",
+	}
+	for name, w := range want {
+		if got[name] != w {
+			t.Errorf("doc of %s = %q, want %q", name, got[name], w)
+		}
 	}
 }

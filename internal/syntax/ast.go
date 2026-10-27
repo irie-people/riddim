@@ -28,6 +28,7 @@ type Decl interface {
 // A FuncDecl is `fn name<T>(params) -> Result { body }`, at top level or in
 // an impl block.
 type FuncDecl struct {
+	Doc        []string // the /// comment, one string per line
 	Fn         Pos
 	Name       *Ident
 	TypeParams []*Ident
@@ -45,6 +46,7 @@ type Param struct {
 
 // A StructDecl is `struct Name<T> { fields }`.
 type StructDecl struct {
+	Doc        []string
 	Struct     Pos
 	Name       *Ident
 	TypeParams []*Ident
@@ -54,12 +56,14 @@ type StructDecl struct {
 
 // A FieldDecl is `name: Type` in a struct.
 type FieldDecl struct {
+	Doc  []string
 	Name *Ident
 	Type TypeExpr
 }
 
 // An EnumDecl is `enum Name<T> { variants }`.
 type EnumDecl struct {
+	Doc        []string
 	Enum       Pos
 	Name       *Ident
 	TypeParams []*Ident
@@ -69,6 +73,7 @@ type EnumDecl struct {
 
 // A VariantDecl is `Name`, `Name(T, U)` or `Name(a: T, b: U)`.
 type VariantDecl struct {
+	Doc    []string
 	Name   *Ident
 	Fields []*VariantField
 	Rparen Pos // NoPos without parentheses
@@ -82,6 +87,7 @@ type VariantField struct {
 
 // An ImplDecl is `impl<T> Type<T> { methods }`.
 type ImplDecl struct {
+	Doc        []string
 	Impl       Pos
 	TypeParams []*Ident
 	Type       *NamedType
@@ -91,6 +97,7 @@ type ImplDecl struct {
 
 // A ConstDecl is `const NAME: Type = value`.
 type ConstDecl struct {
+	Doc   []string
 	Const Pos
 	Name  *Ident
 	Type  TypeExpr
