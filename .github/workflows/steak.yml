@@ -1,0 +1,82 @@
+# Steak automation for the code repo. No LLM calls unless the STEAK_MODEL variable names an Ollama model,
+# which then runs on the runner itself. Never checks out pull-request code.
+#   secret STAKE_TOKEN: fine-grained token with contents + pull requests write on riddim-hq/stake
+#   variable STEAK_MODEL (optional): e.g. a 1-3B instruct model; empty = deterministic heuristic
+name: steak
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, closed, labeled]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+concurrency:
+  group: steak-${{ github.event.pull_request.number || 'setup' }}
+env:
+  STAKE_REPO: "riddim-hq/stake"
+  REPO: ${{ github.repository }}
+  N: ${{ github.event.pull_request.number }}
+  GH_TOKEN: ${{ github.token }}
+jobs:
+  labels:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - run: for n in 1 2 3 5 8 13 21; do gh label create "steak:$n" --repo "$REPO" --color 8B4513 --description "Sized at $n Steak" --force; done
+
+  suggest:
+    if: github.event_name == 'pull_request_target' && contains(fromJSON('["opened","synchronize","reopened"]'), github.event.action)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { repository: "${{ env.STAKE_REPO }}", path: stake }
+      - uses: oven-sh/setup-bun@v2
+      - name: Local model (optional)
+        if: vars.STEAK_MODEL != ''
+        env: { STEAK_MODEL: "${{ vars.STEAK_MODEL }}" }
+        run: curl -fsSL https://ollama.com/install.sh | sh && ollama pull "$STEAK_MODEL"
+      - name: Suggest a size
+        env: { STEAK_MODEL: "${{ vars.STEAK_MODEL }}" }
+        run: |
+          gh pr diff "$N" --repo "$REPO" > pr.diff
+          s=$(bun stake/tools/steak.ts suggest --diff pr.diff)
+          body="<!-- steak-suggest -->
+          $s
+
+          A maintainer other than the author sizes this by adding a \`steak:N\` label (1, 2, 3, 5, 8, 13, 21). See [STAKE.md](https://github.com/$STAKE_REPO/blob/main/STAKE.md)."
+          id=$(gh api "repos/$REPO/issues/$N/comments" --paginate --jq '.[] | select(.body | startswith("<!-- steak-suggest -->")) | .id' | head -1)
+          if [ -n "$id" ]; then gh api -X PATCH "repos/$REPO/issues/comments/$id" -f body="$body" >/dev/null
+          else gh pr comment "$N" --repo "$REPO" --body "$body"; fi
+
+  record:
+    if: github.event_name == 'pull_request_target' && github.event.pull_request.merged == true && (github.event.action == 'closed' || startsWith(github.event.label.name, 'steak:'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { repository: "${{ env.STAKE_REPO }}", token: "${{ secrets.STAKE_TOKEN }}" }
+      - uses: oven-sh/setup-bun@v2
+      - name: Record in the ledger
+        run: |
+          bun tools/steak.ts record . --github "$REPO" --pr "$N" > result.json
+          cat result.json
+          bun tools/steak.ts verify .
+          notes=$(bun -e 'const r=await Bun.file("result.json").json(); console.log(r.notes.map(n=>"- "+n).join("\n"))')
+          vouch=$(bun -e 'const r=await Bun.file("result.json").json(); console.log(r.vouch.length)')
+          rm result.json
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name "steak-bot"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -q -m "Record $REPO#$N"
+            if [ "$vouch" != 0 ]; then
+              # A new contributor's vouch needs a maintainer: open a pull request instead of pushing.
+              git switch -q -c "steak/$N" && git push -q origin "steak/$N"
+              GH_TOKEN="${{ secrets.STAKE_TOKEN }}" gh pr create --repo "$STAKE_REPO" --head "steak/$N" \
+                --title "Vouch and record $REPO#$N" --body "First merged change from a new contributor. Merge to vouch for them and record it."
+            else
+              git push -q origin HEAD
+            fi
+          fi
+          if [ -n "$notes" ]; then gh pr comment "$N" --repo "$REPO" --body "Steak: 
+          $notes"; fi
