@@ -93,7 +93,7 @@ func runPrograms(t *testing.T) []program {
 // every machine.
 func TestRun(t *testing.T) {
 	ps := runPrograms(t)
-	for _, required := range []string{"example_hello", "example_shapes", "example_parse", "example_events"} {
+	for _, required := range []string{"example_hello", "example_shapes", "example_parse", "example_events", "example_files"} {
 		found := false
 		for _, p := range ps {
 			found = found || p.name == required

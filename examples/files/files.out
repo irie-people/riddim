@@ -1,0 +1,5 @@
+monday: 7 words
+tuesday: 12 words
+saved monday
+saved tuesday
+friday: cannot read ./friday.txt: no such file or directory

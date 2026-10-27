@@ -34,6 +34,27 @@ func TestRunHello(t *testing.T) {
 	}
 }
 
+// TestRunFiles is the check of milestone M3: the files example keeps its
+// journal in the directory it is given.
+func TestRunFiles(t *testing.T) {
+	t.Chdir("../..")
+	dir := t.TempDir()
+	t.Setenv("JOURNAL_AUTHOR", "alice")
+	out, errs, code := riddim(t, "run", "examples/files", "--", dir)
+	want := "monday: 7 words\ntuesday: 12 words\nsaved monday\nsaved tuesday\nfriday: cannot read " + dir + "/friday.txt: no such file or directory\n"
+	if out != want || code != 0 {
+		t.Errorf("riddim run examples/files: stdout %q, exit %d\n%s", out, code, errs)
+	}
+	for _, name := range []string{"index.log", "monday.txt", "tuesday.txt"} {
+		if _, err := os.Stat(filepath.Join(dir, name)); err != nil {
+			t.Error(err)
+		}
+	}
+	if _, _, code := riddim(t, "run", "examples/files"); code != 1 {
+		t.Errorf("without a directory: exit %d, want 1", code)
+	}
+}
+
 func TestVersion(t *testing.T) {
 	out, _, code := riddim(t, "version")
 	if out != "riddim "+Version+"\n" || code != 0 {

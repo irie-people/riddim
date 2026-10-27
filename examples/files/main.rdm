@@ -1,0 +1,82 @@
+// Files: a small journal kept in a directory, through the Fs and Env
+// capabilities. Give it a directory it may write to:
+//
+//     riddim run examples/files -- /path/to/dir
+//
+// The author's name comes from the environment variable JOURNAL_AUTHOR.
+
+use go "strings"
+
+/// A note in the journal.
+struct Note {
+    title: String,
+    body: String,
+}
+
+/// A journal: the files of one directory. It holds the Fs capability and
+/// nothing else, so it can read and write files but not print or read the
+/// environment.
+struct Journal {
+    fs: Fs,
+    dir: String,
+    author: String,
+}
+
+impl Journal {
+    fn path(self, name: String) -> String {
+        self.dir + "/" + name
+    }
+
+    /// Saves a note as <title>.txt.
+    fn save(self, note: Note) -> Result<(), Error> {
+        let text = "# ${note.title}\nby ${self.author}\n\n${note.body}\n"
+        self.fs.write(self.path(note.title + ".txt"), text).map_err(|e| e.context("saving ${note.title}"))
+    }
+
+    /// Adds a line to the index, and makes the index if there is none.
+    fn log(self, line: String) -> Result<(), Error> {
+        let path = self.path("index.log")
+        let before = if self.fs.exists(path) { self.fs.read(path)? } else { "" }
+        self.fs.write(path, before + line + "\n")
+    }
+
+    /// The titles of the notes saved so far, from the names of the files.
+    fn titles(self) -> Result<List<String>, Error> {
+        let names = self.fs.list(self.dir)?
+        Ok(names.filter(|n| n.ends_with(".txt")).map(|n| n.slice(0, n.len() - 4)))
+    }
+
+    /// How many words a note has.
+    fn words(self, title: String) -> Result<Int, Error> {
+        let text = self.fs.read(self.path(title + ".txt"))?
+        Ok(strings.Fields(text).len())
+    }
+}
+
+fn main(sys: Sys) -> Result<(), Error> {
+    let dir = match sys.env.args().first() {
+        Some(d) => d,
+        None => return Err(error("usage: files <directory>: the journal is kept in that directory")),
+    }
+    let author = sys.env.get("JOURNAL_AUTHOR").unwrap_or("anonymous")
+    let journal = Journal { fs: sys.fs, dir: dir, author: author }
+
+    let notes = [
+        Note { title: "monday", body: "Started a journal." },
+        Note { title: "tuesday", body: "Wrote two notes, and an index of them." },
+    ]
+    for note in notes {
+        journal.save(note)?
+        journal.log("saved ${note.title}")?
+    }
+    for title in journal.titles()? {
+        sys.out.println("${title}: ${journal.words(title)?} words")
+    }
+    sys.out.println(journal.fs.read(journal.path("index.log"))?.trim())
+
+    match journal.words("friday") {
+        Ok(n) => sys.out.println("friday: ${n} words"),
+        Err(e) => sys.out.println("friday: ${e.message()}"),
+    }
+    Ok(())
+}
