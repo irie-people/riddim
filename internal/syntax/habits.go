@@ -284,7 +284,6 @@ func (p *parser) turbofish() {
 	start := p.tok.Pos
 	p.next()
 	p.next()
-	p.quiet++
 	for p.tok.Kind != GT {
 		p.typ()
 		if p.tok.Kind != COMMA {
@@ -292,7 +291,6 @@ func (p *parser) turbofish() {
 		}
 		p.next()
 	}
-	p.quiet--
 	end := p.expect(GT, "`>` to end the type arguments").End
 	d := p.report("R0116", Span{start, end}, "calls take no type arguments: Riddim infers them; where it needs help, annotate the binding, as in `let xs: List<Int> = ...`")
 	d.Fixes = append(d.Fixes, fix("delete the type arguments", p.fs.Edit(Span{start, end}, "")))

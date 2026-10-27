@@ -51,7 +51,6 @@ type parser struct {
 	loops    int // enclosing loops in the current function or closure
 	noStruct bool
 	params   []*Param // the parameters of the function being parsed
-	quiet    int      // >0 while skipping code that is reported as a whole
 	diags    []diag.Diagnostic
 }
 
@@ -79,9 +78,6 @@ func (p *parser) peek() Token {
 
 // report records an error and goes on parsing.
 func (p *parser) report(code string, sp Span, format string, args ...any) *diag.Diagnostic {
-	if p.quiet > 0 {
-		return &diag.Diagnostic{}
-	}
 	p.diags = append(p.diags, p.fs.Diag(code, sp, format, args...))
 	return &p.diags[len(p.diags)-1]
 }

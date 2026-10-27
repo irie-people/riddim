@@ -225,6 +225,9 @@ func TestParseErrors(t *testing.T) {
 		{"#[derive(Debug)]\nstruct S { }", "R0122"},
 		{"func f() { }", "R0124"},
 		{"fn f() { for { } for x < 3 { } }", "R0105 R0105"},
+		// errors inside type arguments are reported, and parsing goes on
+		{"fn f() { g::<,>() }\nfn h() { ) }", "R0105 R0105"},
+		{"fn f() { g::<&str>() }", "R0111 R0116"},
 		{"fn f() { match x { A => y = 1 } }", "R0105"},
 		// one error per declaration: recovery finds the next one
 		{"fn f() { ) }\nfn g() { ] }\nfn h() { }", "R0105 R0105"},
