@@ -19,7 +19,7 @@ import (
 )
 
 // Version is the compiler's version.
-const Version = "0.0.0-m1"
+const Version = "0.0.0-m2"
 
 const usage = `usage:
   riddim check [dir] [--json]   check every .rdm file in dir (default .)

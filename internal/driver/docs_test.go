@@ -1,6 +1,7 @@
 package driver
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"sort"
@@ -103,5 +104,41 @@ func TestHabits(t *testing.T) {
 		if code >= "R0108" && code < "R0200" && !listed[code] {
 			t.Errorf("%s is in the habit range but not in the habits list", code)
 		}
+	}
+}
+
+// TestReferencePrograms checks the code in docs/REFERENCE.md that agents
+// copy: each block that is a program, or a list of declarations, checks
+// without a diagnostic.
+func TestReferencePrograms(t *testing.T) {
+	doc, err := os.ReadFile(filepath.Join(root, "docs", "REFERENCE.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	blocks := strings.Split(string(doc), "```")
+	checked := 0
+	for i := 1; i < len(blocks); i += 2 {
+		src := strings.TrimPrefix(blocks[i], "\n")
+		first := strings.Fields(src)
+		if len(first) == 0 {
+			continue
+		}
+		switch {
+		case strings.Contains(src, "fn main"):
+		case first[0] == "const" || first[0] == "struct" || first[0] == "enum" || first[0] == "///":
+			src += "\nfn main() {}\n"
+		default:
+			continue
+		}
+		checked++
+		u := FromSources(".", map[string][]byte{"ref.rdm": []byte(src)})
+		if ds := u.Check(); len(ds) > 0 {
+			var b bytes.Buffer
+			diag.WriteText(&b, ds, u.Fset.LineSource())
+			t.Errorf("block %d of docs/REFERENCE.md:\n%s", i/2+1, b.String())
+		}
+	}
+	if checked < 3 {
+		t.Errorf("checked %d blocks, want at least 3", checked)
 	}
 }
