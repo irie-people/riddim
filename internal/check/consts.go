@@ -80,6 +80,50 @@ func (c *checker) floatLit(e *syntax.FloatLit) Type {
 	return Float
 }
 
+// convertConst is `k as to` for a constant k of type from.
+func convertConst(k *Const, from, to Type) *Const {
+	switch {
+	case from == Float && to == Float:
+		return k
+	case from == Float && to == Int:
+		return &Const{Int: big.NewInt(FloatToInt(k.Float))}
+	case from == Float:
+		return &Const{Int: big.NewInt(int64(FloatToByte(k.Float)))}
+	case to == Float:
+		f, _ := new(big.Float).SetInt(k.Int).Float64()
+		return &Const{Float: f}
+	case to == Byte:
+		return &Const{Int: new(big.Int).And(k.Int, big.NewInt(255))} // wraps, as Go's byte(x)
+	}
+	return k // Int or Byte to Int
+}
+
+// FloatToInt is `f as Int`: it truncates toward zero and saturates at the
+// ends of Int; NaN gives 0. The runtime's floatToInt does the same.
+func FloatToInt(f float64) int64 {
+	switch {
+	case math.IsNaN(f):
+		return 0
+	case f >= 1<<63:
+		return math.MaxInt64
+	case f <= -(1 << 63):
+		return math.MinInt64
+	}
+	return int64(f)
+}
+
+// FloatToByte is `f as Byte`: it truncates toward zero and saturates at 0 and
+// 255; NaN gives 0. The runtime's floatToByte does the same.
+func FloatToByte(f float64) byte {
+	switch {
+	case math.IsNaN(f) || f <= 0:
+		return 0
+	case f >= 255:
+		return 255
+	}
+	return byte(f)
+}
+
 func isZero(k *Const, t Type) bool {
 	switch Resolve(t) {
 	case Int, Byte:

@@ -38,6 +38,8 @@ func Inspect(n Node, f func(Node) bool) {
 		each(n.X)
 	case *UnaryExpr:
 		each(n.X)
+	case *AsExpr:
+		each(n.X)
 	case *BinaryExpr:
 		each(n.X, n.Y)
 	case *ParenExpr:

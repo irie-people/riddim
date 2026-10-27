@@ -183,7 +183,7 @@ func TestParseErrors(t *testing.T) {
 		{"fn f() { x = }", "R0105"},
 		{"fn f() { break }", "R0107"},
 		{"fn f() { loop { xs.map(|x| { continue }) } }", "R0107"},
-		{"fn f() -> Int { 1 as Float }", "R0106"},
+		{"fn f() -> Float { 1 as }", "R0105"},
 		{"fn f() { if let Some(x) = y { } }", "R0106"},
 		{"use go \"strings\"", "R0106"},
 		{"fn f(m: Map<String, Int>) { }", "R0106"},

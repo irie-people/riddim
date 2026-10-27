@@ -1,0 +1,23 @@
+fn half(x: Float) -> Float {
+    x / 2.0
+}
+
+fn main() {
+    let s = "12"
+    let a = s as Int
+    let b = true as Int
+    let n = 5
+    let c = n as String
+    let d: Float = n
+    let e = half(n + 1)
+    let mut total = 0.0
+    total += n
+    let by: Byte = 3
+    let f = n + by
+    let _ = a
+    let _ = b
+    let _ = c
+    let _ = d
+    let _ = e
+    let _ = f
+}

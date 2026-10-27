@@ -25,6 +25,7 @@ func Check(fset *syntax.FileSet, files []*syntax.File) (*Program, []diag.Diagnos
 			Defs:      map[*syntax.Ident]*Local{},
 			Closures:  map[*syntax.ClosureExpr]*ClosureInfo{},
 			Tries:     map[*syntax.TryExpr]*TryInfo{},
+			Casts:     map[*syntax.AsExpr]*CastInfo{},
 			Funcs:     map[*syntax.FuncDecl]*FuncObj{},
 			Consts:    map[*syntax.ConstDecl]*ConstObj{},
 			TypeDecls: map[syntax.Decl]*TypeDecl{},

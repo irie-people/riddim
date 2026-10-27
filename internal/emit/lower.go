@@ -607,6 +607,8 @@ func (f *fn) expr(x syntax.Expr) value {
 		return f.try(x)
 	case *syntax.UnaryExpr:
 		return f.unary(x)
+	case *syntax.AsExpr:
+		return f.cast(x)
 	case *syntax.BinaryExpr:
 		return f.binary(x)
 	case *syntax.TupleExpr:
@@ -980,6 +982,39 @@ func (f *fn) unary(x *syntax.UnaryExpr) value {
 	return value{s: op + s, stable: v.stable, op: true}
 }
 
+// cast lowers `x as T`. Float to Int or Byte goes through the runtime,
+// which truncates toward zero and saturates: Go's own conversion gives an
+// implementation-dependent value out of range. A conversion Go would reject
+// in a constant (a fraction dropped, a Byte overflowed) is written folded.
+func (f *fn) cast(x *syntax.AsExpr) value {
+	ci := f.info.Casts[x]
+	from, to := check.Resolve(ci.From), check.Resolve(ci.To)
+	if k := ci.Const; k != nil && (from == check.Float && to != check.Float || from == check.Int && to == check.Byte) {
+		if to == check.Byte {
+			return value{s: "byte(" + k.Int.String() + ")", stable: true}
+		}
+		return value{s: k.Int.String(), stable: true, op: k.Int.Sign() < 0}
+	}
+	v := f.expr(x.X)
+	if v.never || from == to {
+		return v
+	}
+	var conv string
+	switch {
+	case to == check.Float:
+		conv = "float64"
+	case from == check.Float && to == check.Int:
+		conv = "floatToInt"
+	case from == check.Float:
+		conv = "floatToByte"
+	case to == check.Int:
+		conv = "int"
+	default:
+		conv = "byte"
+	}
+	return value{s: conv + "(" + v.s + ")", stable: v.stable}
+}
+
 var goOps = map[syntax.Kind]string{
 	syntax.PLUS: "+", syntax.MINUS: "-", syntax.STAR: "*", syntax.SLASH: "/", syntax.PERCENT: "%",
 	syntax.EQ: "==", syntax.NE: "!=", syntax.LT: "<", syntax.LE: "<=", syntax.GT: ">", syntax.GE: ">=",
@@ -998,6 +1033,8 @@ func (f *fn) isConst(x syntax.Expr) bool {
 		return f.isConst(x.X)
 	case *syntax.UnaryExpr:
 		return f.isConst(x.X)
+	case *syntax.AsExpr:
+		return f.info.Casts[x].Const != nil
 	case *syntax.BinaryExpr:
 		return f.isConst(x.X) && f.isConst(x.Y) && !(x.Op == syntax.PERCENT && check.Resolve(f.typeOf(x)) == check.Float)
 	}
@@ -1053,7 +1090,7 @@ func (f *fn) binary(x *syntax.BinaryExpr) value {
 			rs = f.goType(named) + "(" + rs + ")"
 		}
 	}
-	if operandT == check.Float && f.isConst(x.X) && f.isConst(x.Y) {
+	if operandT == check.Float && f.isConst(x.X) && f.isConst(x.Y) && !strings.HasPrefix(ls, "float64(") {
 		// Go folds constant expressions exactly; a typed operand makes it round
 		// each step to float64, as Riddim's Float arithmetic does.
 		ls = "float64(" + ls + ")"

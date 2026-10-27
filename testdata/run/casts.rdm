@@ -1,0 +1,46 @@
+// `as` converts between Int, Float and Byte.
+
+const LIMIT: Int = 300
+
+fn mean(xs: List<Int>) -> Float {
+    xs.fold(0, |a, b| a + b) as Float / xs.len() as Float
+}
+
+fn show(sys: Sys, label: String, n: Int) {
+    sys.out.println(label + " " + n.to_string())
+}
+
+fn main(sys: Sys) {
+    let n = 7
+    let half = n as Float / 2.0
+    sys.out.println(half.to_string())
+    show(sys, "truncated", half as Int)
+    show(sys, "negative", -3.9 as Int)
+    let x = -3.9
+    show(sys, "negative at run time", x as Int)
+    let big = 1e30
+    show(sys, "saturated", big as Int)
+    show(sys, "saturated low", -big as Int)
+    let zero = 0.0
+    let nan = zero / zero
+    show(sys, "nan", nan as Int)
+    let b = LIMIT as Byte
+    sys.out.println("wrapped " + b.to_string())
+    let k = 300
+    sys.out.println("wrapped at run time " + (k as Byte).to_string())
+    sys.out.println("minus one " + (-1 as Byte).to_string())
+    sys.out.println("byte of 2.9 " + (2.9 as Byte).to_string())
+    let high = 300.5
+    let low = -7.5
+    sys.out.println("byte saturated " + (high as Byte).to_string() + " " + (low as Byte).to_string() + " " + (nan as Byte).to_string())
+    let by: Byte = 200
+    show(sys, "widened", by as Int + 100)
+    sys.out.println((by as Float / 8.0).to_string())
+    sys.out.println(mean([1, 2, 4]).to_string())
+    show(sys, "same", n as Int)
+    show(sys, "round trip", n as Float as Int)
+    sys.out.println((1 as Float + 0.1).to_string())
+    sys.out.println((LIMIT as Float * 1.5).to_string())
+    let m = 9223372036854775807
+    sys.out.println((m as Float).to_string())
+}

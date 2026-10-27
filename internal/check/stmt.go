@@ -197,11 +197,15 @@ func (c *checker) assign(s *syntax.AssignStmt) {
 	l, r := Resolve(tt), Resolve(vt)
 	switch {
 	case !c.assignable(vt, tt):
+		var d *diag.Diagnostic
 		if (l == Int && r == Float) || (l == Float && r == Int) {
-			d := c.errorf("R0301", s.Value.Span(), "cannot mix Int and Float in `%s`", op)
+			d = c.errorf("R0301", s.Value.Span(), "cannot mix Int and Float in `%s`", op)
 			d.Notes = append(d.Notes, "Riddim has no implicit conversions")
 		} else {
-			c.errorf("R0301", s.Value.Span(), "mismatched types in `%s`: %s and %s", op, Deep(l), Deep(r))
+			d = c.errorf("R0301", s.Value.Span(), "mismatched types in `%s`: %s and %s", op, Deep(l), Deep(r))
+		}
+		if to := widening(r, l); to != "" {
+			d.Fixes = append(d.Fixes, c.asFix(s.Value, to))
 		}
 	case !numeric(l) && !(s.Op == syntax.PLUSEQ && l == String):
 		c.errorf("R0301", s.Span(), "`%s` needs Int, Float or Byte operands, found %s", op, Deep(l))

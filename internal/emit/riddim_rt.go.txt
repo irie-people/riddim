@@ -10,6 +10,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 )
@@ -195,6 +196,32 @@ func parseInt(s string) Result[int, error] {
 		return Err[int](fmt.Errorf("cannot parse %q as Int", s))
 	}
 	return Ok[int, error](int(n))
+}
+
+// floatToInt is `f as Int`: it truncates toward zero and saturates at the
+// ends of Int; NaN gives 0. Go's int(f) is implementation-dependent there.
+func floatToInt(f float64) int {
+	switch {
+	case math.IsNaN(f):
+		return 0
+	case f >= 1<<63:
+		return math.MaxInt64
+	case f <= -(1 << 63):
+		return math.MinInt64
+	}
+	return int(f)
+}
+
+// floatToByte is `f as Byte`: it truncates toward zero and saturates at 0 and
+// 255; NaN gives 0.
+func floatToByte(f float64) byte {
+	switch {
+	case math.IsNaN(f) || f <= 0:
+		return 0
+	case f >= 255:
+		return 255
+	}
+	return byte(f)
 }
 
 // Out is the Out capability: a stream to print to.

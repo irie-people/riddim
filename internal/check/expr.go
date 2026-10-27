@@ -35,6 +35,9 @@ func (c *checker) mismatch(e syntax.Expr, want, got Type) {
 	if (w == Int && g == Float) || (w == Float && g == Int) {
 		d.Notes = append(d.Notes, "Riddim has no implicit conversions between Int and Float")
 	}
+	if to := widening(g, w); to != "" {
+		d.Fixes = append(d.Fixes, c.asFix(e, to))
+	}
 	if g == Unit {
 		if b, ok := unparen(e).(*syntax.BlockExpr); ok && !hasTail(b) {
 			d.Notes = append(d.Notes, "the block ends without a value")
@@ -82,6 +85,8 @@ func (c *checker) expr0(e syntax.Expr, want Type) Type {
 		return c.tryExpr(e)
 	case *syntax.UnaryExpr:
 		return c.unary(e, want)
+	case *syntax.AsExpr:
+		return c.cast(e)
 	case *syntax.BinaryExpr:
 		return c.binary(e, want)
 	case *syntax.ParenExpr:
@@ -895,11 +900,18 @@ func (c *checker) arith(e *syntax.BinaryExpr, op string, lt, rt Type) Type {
 	}
 	l, r := Resolve(lt), Resolve(rt)
 	if !c.assignable(rt, lt) {
+		var d *diag.Diagnostic
 		if (l == Int && r == Float) || (l == Float && r == Int) {
-			d := c.errorf("R0301", e.Span(), "cannot mix Int and Float in `%s`", op)
-			d.Notes = append(d.Notes, "Riddim has no implicit conversions; write a Float literal such as 2.0 where you mean a Float")
+			d = c.errorf("R0301", e.Span(), "cannot mix Int and Float in `%s`", op)
+			d.Notes = append(d.Notes, "Riddim has no implicit conversions: convert the Int with `as Float`")
 		} else {
-			c.errorf("R0301", e.Span(), "mismatched types in `%s`: %s and %s", op, Deep(l), Deep(r))
+			d = c.errorf("R0301", e.Span(), "mismatched types in `%s`: %s and %s", op, Deep(l), Deep(r))
+		}
+		// Convert the narrower operand to the wider one's type.
+		if to := widening(r, l); to != "" {
+			d.Fixes = append(d.Fixes, c.asFix(e.Y, to))
+		} else if to := widening(l, r); to != "" {
+			d.Fixes = append(d.Fixes, c.asFix(e.X, to))
 		}
 		return invalid
 	}
@@ -913,6 +925,67 @@ func (c *checker) arith(e *syntax.BinaryExpr, op string, lt, rt Type) Type {
 	}
 	c.foldBinary(e, l)
 	return l
+}
+
+// cast checks `x as T`, which converts between Int, Float and Byte. A
+// constant operand gives a constant result.
+func (c *checker) cast(e *syntax.AsExpr) Type {
+	to := c.resolveType(e.Type)
+	from := c.expr(e.X, nil)
+	if isInvalid(to) || isInvalid(from) {
+		return invalid
+	}
+	if isNever(from) {
+		return Never
+	}
+	f, t := Resolve(from), Resolve(to)
+	if !numeric(f) || !numeric(t) {
+		d := c.errorf("R0301", e.Span(), "`as` converts between Int, Float and Byte, not %s to %s", Deep(f), Deep(t))
+		switch {
+		case f == String && (t == Int || t == Float):
+			d.Notes = append(d.Notes, fmt.Sprintf("parse the text instead: `.parse_%s()` returns a Result", strings.ToLower(t.String())))
+		case t == String:
+			d.Notes = append(d.Notes, "make text with `.to_string()` or interpolation, as in \"${x}\"")
+		case f == Bool && numeric(t):
+			d.Notes = append(d.Notes, "write `if b { 1 } else { 0 }`")
+		}
+		return invalid
+	}
+	info := &CastInfo{From: f, To: t}
+	if k := c.consts[e.X]; k != nil {
+		info.Const = convertConst(k, f, t)
+		c.consts[e] = info.Const
+	}
+	c.info.Casts[e] = info
+	return t
+}
+
+// widening returns the type a value of type from converts to, with `as`,
+// to fit where a value of type to is expected without losing its value: Int
+// and Byte to Float, Byte to Int. It returns "" for any other pair.
+func widening(from, to Type) string {
+	switch f, t := Resolve(from), Resolve(to); {
+	case t == Float && (f == Int || f == Byte):
+		return "Float"
+	case t == Int && f == Byte:
+		return "Int"
+	}
+	return ""
+}
+
+// asFix converts x with `as T`, adding parentheses where the precedence of
+// `as`, tighter than any binary operator, needs them.
+func (c *checker) asFix(x syntax.Expr, to string) diag.Fix {
+	sp := x.Span()
+	fix := diag.Fix{Title: "convert it to " + to}
+	switch x.(type) {
+	case *syntax.BinaryExpr, *syntax.ClosureExpr, *syntax.ReturnExpr:
+		fix.Edits = append(fix.Edits, c.fset.Edit(syntax.Span{Start: sp.Start, End: sp.Start}, "("),
+			c.fset.Edit(syntax.Span{Start: sp.End, End: sp.End}, ") as "+to))
+	default:
+		fix.Edits = append(fix.Edits, c.fset.Edit(syntax.Span{Start: sp.End, End: sp.End}, " as "+to))
+	}
+	return fix
 }
 
 func (c *checker) structLit(e *syntax.StructLit, want Type) Type {

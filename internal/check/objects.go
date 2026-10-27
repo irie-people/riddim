@@ -149,6 +149,7 @@ type Info struct {
 	Defs      map[*syntax.Ident]*Local
 	Closures  map[*syntax.ClosureExpr]*ClosureInfo
 	Tries     map[*syntax.TryExpr]*TryInfo
+	Casts     map[*syntax.AsExpr]*CastInfo
 	Funcs     map[*syntax.FuncDecl]*FuncObj
 	Consts    map[*syntax.ConstDecl]*ConstObj
 	TypeDecls map[syntax.Decl]*TypeDecl
@@ -250,6 +251,13 @@ type ClosureInfo struct {
 type TryInfo struct {
 	Option bool
 	Outer  Type
+}
+
+// CastInfo describes `x as T`: the types converted between, and the value
+// when x is a constant.
+type CastInfo struct {
+	From, To Type
+	Const    *Const
 }
 
 // A Program is a checked program.

@@ -253,6 +253,12 @@ type (
 		X     Expr
 		Quest Pos
 	}
+	// AsExpr is `x as Type`.
+	AsExpr struct {
+		X    Expr
+		As   Pos
+		Type TypeExpr
+	}
 	// UnaryExpr is `-x` or `!x`.
 	UnaryExpr struct {
 		OpPos Pos
@@ -383,6 +389,7 @@ func (x *MethodCallExpr) Span() Span { return Span{x.Recv.Span().Start, x.Rparen
 func (x *FieldExpr) Span() Span      { return Span{x.X.Span().Start, x.Name.Span().End} }
 func (x *IndexExpr) Span() Span      { return Span{x.X.Span().Start, x.Rbrack + 1} }
 func (x *TryExpr) Span() Span        { return Span{x.X.Span().Start, x.Quest + 1} }
+func (x *AsExpr) Span() Span         { return Span{x.X.Span().Start, x.Type.Span().End} }
 func (x *UnaryExpr) Span() Span      { return Span{x.OpPos, x.X.Span().End} }
 func (x *BinaryExpr) Span() Span     { return Span{x.X.Span().Start, x.Y.Span().End} }
 func (x *ParenExpr) Span() Span      { return Span{x.Lparen, x.Rparen + 1} }
@@ -431,6 +438,7 @@ func (*MethodCallExpr) exprNode() {}
 func (*FieldExpr) exprNode()      {}
 func (*IndexExpr) exprNode()      {}
 func (*TryExpr) exprNode()        {}
+func (*AsExpr) exprNode()         {}
 func (*UnaryExpr) exprNode()      {}
 func (*BinaryExpr) exprNode()     {}
 func (*ParenExpr) exprNode()      {}

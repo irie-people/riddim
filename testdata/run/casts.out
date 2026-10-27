@@ -1,0 +1,20 @@
+3.5
+truncated 3
+negative -3
+negative at run time -3
+saturated 9223372036854775807
+saturated low -9223372036854775808
+nan 0
+wrapped 44
+wrapped at run time 44
+minus one 255
+byte of 2.9 2
+byte saturated 255 0 0
+widened 300
+25
+2.3333333333333335
+same 7
+round trip 7
+1.1
+450
+9.223372036854776e+18

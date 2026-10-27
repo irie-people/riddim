@@ -621,13 +621,14 @@ func (p *parser) mulExpr() Expr {
 	return x
 }
 
+// castExpr parses `x as T`, which binds tighter than `*` and looser than
+// unary operators: `-x as Float` converts -x.
 func (p *parser) castExpr() Expr {
 	x := p.unaryExpr()
 	for p.tok.Kind == AS {
-		as := p.tok
+		as := p.tok.Pos
 		p.next()
-		t := p.typ()
-		p.report("R0106", Span{as.Pos, t.Span().End}, "`as` is not supported in this version")
+		x = &AsExpr{X: x, As: as, Type: p.typ()}
 	}
 	return x
 }
