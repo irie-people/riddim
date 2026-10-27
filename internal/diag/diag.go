@@ -3,6 +3,7 @@
 package diag
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -108,27 +109,30 @@ func normalize(ds []Diagnostic) []Diagnostic {
 }
 
 // WriteJSON writes ds as a JSON array, one diagnostic per line; `[]` when empty.
+// Strings are written without HTML escaping, so a fix's `=>` or `<` reaches
+// an agent exactly as written.
 func WriteJSON(w io.Writer, ds []Diagnostic) error {
 	ds = normalize(ds)
 	if len(ds) == 0 {
 		_, err := io.WriteString(w, "[]\n")
 		return err
 	}
-	var b strings.Builder
+	var b bytes.Buffer
+	enc := json.NewEncoder(&b)
+	enc.SetEscapeHTML(false)
 	b.WriteString("[")
 	for i, d := range ds {
-		line, err := json.Marshal(d)
-		if err != nil {
-			return err
-		}
 		if i > 0 {
 			b.WriteString(",")
 		}
 		b.WriteString("\n")
-		b.Write(line)
+		if err := enc.Encode(d); err != nil {
+			return err
+		}
+		b.Truncate(b.Len() - 1) // Encode ends each value with a newline
 	}
 	b.WriteString("\n]\n")
-	_, err := io.WriteString(w, b.String())
+	_, err := w.Write(b.Bytes())
 	return err
 }
 

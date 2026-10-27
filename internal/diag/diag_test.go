@@ -44,6 +44,29 @@ func TestJSONArraysAlwaysPresent(t *testing.T) {
 	}
 }
 
+// TestJSONNoHTMLEscaping checks that fixes reach agents as written: `=>`, `<`,
+// `>` and `&` are not turned into \u escapes.
+func TestJSONNoHTMLEscaping(t *testing.T) {
+	var b bytes.Buffer
+	d := sample()
+	d.Message = "expected List<Int> & more"
+	if err := WriteJSON(&b, []Diagnostic{d}); err != nil {
+		t.Fatal(err)
+	}
+	out := b.String()
+	for _, want := range []string{`"text":"        Ok(None) => todo(),\n"`, `"message":"expected List<Int> & more"`} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %s in\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, `\u00`) {
+		t.Errorf("HTML escapes in\n%s", out)
+	}
+	if !strings.HasPrefix(out, "[\n{") || !strings.HasSuffix(out, "}\n]\n") {
+		t.Errorf("layout changed:\n%s", out)
+	}
+}
+
 func TestText(t *testing.T) {
 	src := func(file string, line int) (string, bool) {
 		if line == 12 {

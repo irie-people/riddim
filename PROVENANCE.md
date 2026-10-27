@@ -23,6 +23,7 @@ Riddim is written from public documentation and public open-source projects. Eve
 | 2026-10-27 | Go source, `$GOROOT/src/go/printer/printer.go` (`writeComment`) | gofmt keeps a `//line` comment that starts in column 1 in column 1, so the generated Go can be gofmt'd and keep its directives |
 | 2026-10-27 | `go doc go/format.Source`; `go help build` (`-o`, `-trimpath`) | Formatting the generated Go; building it with `go build -trimpath -o`, and, in the run tests, building every test program at once into one directory |
 | 2026-10-27 | `go doc strconv.ParseInt`, `go doc strconv.FormatFloat` | `String.parse_int` in the runtime: base 10, an optional sign, `ErrRange` for values out of range; `Float.to_string` as `FormatFloat(f, 'g', -1, 64)` (DESIGN §4.9) |
+| 2026-10-27 | `go doc encoding/json.Encoder.SetEscapeHTML`, `go doc encoding/json.Encoder.Encode` | `riddim check --json` writes strings without HTML escaping, so a fix's `=>` is not sent as `>`; Encode's trailing newline is trimmed to keep one diagnostic per line (`internal/diag`) |
 
 ### Ideas from prior knowledge
 
