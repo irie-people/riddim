@@ -1,0 +1,6 @@
+fn main(sys: Sys) {
+    let xs = [1, 2, 3]
+    let i = xs.len()
+    sys.out.println("indexing")
+    sys.out.println(xs[i].to_string())
+}

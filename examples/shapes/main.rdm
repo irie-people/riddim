@@ -1,0 +1,82 @@
+// Shapes: enums, methods, associated functions and match.
+
+const PI: Float = 3.14159
+
+/// A shape in the plane.
+enum Shape {
+    Circle(radius: Float),
+    Rect(w: Float, h: Float),
+    Square(side: Float),
+    Empty,
+}
+
+impl Shape {
+    fn area(self) -> Float {
+        match self {
+            Circle(r) => PI * r * r,
+            Rect(w, h) => w * h,
+            Square(s) => s * s,
+            Empty => 0.0,
+        }
+    }
+
+    fn name(self) -> String {
+        match self {
+            Circle(_) => "circle",
+            Rect(_, _) | Square(_) => "rectangle",
+            Empty => "nothing",
+        }
+    }
+
+    fn scale(self, k: Float) -> Shape {
+        match self {
+            Circle(r) => Shape::Circle(r * k),
+            Rect(w, h) => Shape::Rect(w * k, h * k),
+            Square(s) => Shape::Square(s * k),
+            Empty => Shape::Empty,
+        }
+    }
+}
+
+struct Point {
+    x: Float,
+    y: Float,
+}
+
+impl Point {
+    fn origin() -> Point {
+        Point { x: 0.0, y: 0.0 }
+    }
+
+    fn moved(self, dx: Float, dy: Float) -> Point {
+        Point { x: self.x + dx, ..self }.lift(dy)
+    }
+
+    fn lift(self, dy: Float) -> Point {
+        Point { y: self.y + dy, ..self }
+    }
+
+    fn show(self) -> String {
+        "(" + self.x.to_string() + ", " + self.y.to_string() + ")"
+    }
+}
+
+fn describe(s: Shape) -> String {
+    s.name() + " with area " + s.area().to_string()
+}
+
+fn main(sys: Sys) {
+    let shapes = [Shape::Circle(1.0), Shape::Rect(2.0, 3.0), Shape::Square(1.5), Shape::Empty]
+    for s in shapes {
+        sys.out.println(describe(s))
+    }
+    let total = shapes.fold(0.0, |acc, s| acc + s.area())
+    sys.out.println("total area: " + total.to_string())
+    let big = shapes.map(|s| s.scale(2.0)).filter(|s| s.area() > 10.0)
+    sys.out.println("big after scaling: " + big.len().to_string())
+    let p = Point::origin().moved(1.5, -2.0)
+    sys.out.println("point: " + p.show())
+    if shapes[3] == Shape::Empty {
+        sys.out.println("the last shape is empty")
+    }
+}

@@ -17,6 +17,11 @@ Riddim is written from public documentation and public open-source projects. Eve
 | 2026-10-27 | Go standard library: `go doc unicode/utf8` (`RuneCount`, `DecodeRune`) | Columns counted in code points and invalid UTF-8 detection in the lexer (`internal/syntax`, `internal/diag`) |
 | 2026-10-27 | The Go Programming Language Specification, `$GOROOT/doc/go_spec.html` (Method declarations) | A struct's method and field names must be distinct in Go, so the checker reports a field and a method with one name (R0202) instead of emitting Go that cannot compile (`internal/check`) |
 | 2026-10-27 | The Go Programming Language Specification, `$GOROOT/doc/go_spec.html` (Arithmetic operators, Constant expressions, Representability) | Go rejects division by a constant zero and typed constants that overflow, so the checker folds Riddim constant expressions and reports those cases as R0308 (`internal/check/consts.go`) |
+| 2026-10-27 | The Go Programming Language Specification, `$GOROOT/doc/go_spec.html` (Method declarations: generic methods, Go 1.27) | Methods of generic structs with their own type parameters lower to Go 1.27 generic methods, as DESIGN §6 plans (`internal/emit`) |
+| 2026-10-27 | The Go Programming Language Specification, `$GOROOT/doc/go_spec.html` (Constant expressions, Representability), checked with a small program | Untyped float constant expressions fold exactly, typed ones round at each step; the emitter types one operand of a constant Float operation so it rounds like IEEE 754 arithmetic (`0.1 + 0.2` prints 0.30000000000000004) |
+| 2026-10-27 | Go source, `$GOROOT/src/cmd/compile/doc.go` (Line Directives) | The `//line file:line` form, at the start of a line, with file names relative to the directory of the generated file; how R0900 maps go build's messages back to `.rdm` lines (`internal/emit`, `internal/driver`) |
+| 2026-10-27 | Go source, `$GOROOT/src/go/printer/printer.go` (`writeComment`) | gofmt keeps a `//line` comment that starts in column 1 in column 1, so the generated Go can be gofmt'd and keep its directives |
+| 2026-10-27 | `go doc go/format.Source`; `go help build` (`-o`, `-trimpath`) | Formatting the generated Go; building it with `go build -trimpath -o`, and, in the run tests, building every test program at once into one directory |
 
 ### Ideas from prior knowledge
 

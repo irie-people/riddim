@@ -1,0 +1,39 @@
+struct Counter {
+    n: Int,
+}
+
+fn bump(c: Counter) -> Counter {
+    let mut d = c
+    d.n += 1
+    d
+}
+
+fn main(sys: Sys) {
+    let xs = [1, 2, 3]
+    let ys = xs.push(4)
+    sys.out.println(xs.len().to_string() + " " + ys.len().to_string())
+    let base = [1, 2, 3, 4].filter(|x| x < 3)
+    let a = base.push(10)
+    let b = base.push(20)
+    sys.out.println(a[2].to_string() + " " + b[2].to_string() + " " + base.len().to_string())
+    let c = Counter { n: 1 }
+    let d = bump(c)
+    sys.out.println(c.n.to_string() + " " + d.n.to_string())
+    let mut list = [Counter { n: 0 }]
+    let snapshot = list
+    list = list.push(Counter { n: 9 })
+    sys.out.println(snapshot.len().to_string() + " " + list.len().to_string())
+    sys.out.println(list.get(5).is_none().to_string())
+    sys.out.println(list.get(1).map(|k| k.n).unwrap_or(0).to_string())
+    let mut e: List<Int> = []
+    let mut i = 0
+    while i < 3 {
+        e = e.push(i * i)
+        i += 1
+    }
+    sys.out.println(e.map(|x| x.to_string()).fold("", |acc, s| acc + s))
+    let nested = [[1], [2, 3]]
+    sys.out.println(nested[1][1].to_string())
+    let evens = [1, 2, 3, 4, 5, 6].filter(|x| x % 2 == 0)
+    sys.out.println(evens.len().to_string())
+}

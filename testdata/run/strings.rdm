@@ -1,0 +1,24 @@
+fn main(sys: Sys) {
+    let s = "tab\there \"quoted\" back\\slash \$dollar \u{48}\u{1F600} $ alone"
+    sys.out.println(s)
+    let a = "apple"
+    let b = "banana"
+    sys.out.println((a < b).to_string())
+    sys.out.println(a + "-" + b)
+    sys.out.println((a.to_string() == "apple").to_string())
+    match "x99".parse_int() {
+        Ok(n) => sys.out.println(n.to_string()),
+        Err(e) => sys.out.println(e.message()),
+    }
+    match "99999999999999999999".parse_int() {
+        Ok(n) => sys.out.println(n.to_string()),
+        Err(e) => sys.out.println(e.message()),
+    }
+    sys.out.println("-42".parse_int().unwrap_or(0).to_string())
+    sys.out.println("+7".parse_int().unwrap_or(0).to_string())
+    sys.out.print("no newline, ")
+    sys.out.println("then one")
+    sys.err.println("this goes to standard error")
+    sys.out.println("")
+    sys.out.println("é")
+}

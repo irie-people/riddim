@@ -1,0 +1,58 @@
+fn identity<T>(x: T) -> T {
+    x
+}
+
+fn pair_of<T>(x: T) -> (T, T) {
+    (x, x)
+}
+
+fn first_or<T>(xs: List<T>, d: T) -> T {
+    match xs.get(0) {
+        Some(x) => x,
+        None => d,
+    }
+}
+
+fn compose<A, B, C>(f: fn(A) -> B, g: fn(B) -> C) -> fn(A) -> C {
+    |x| g(f(x))
+}
+
+struct Box<T> {
+    value: T,
+}
+
+impl<T> Box<T> {
+    fn wrap(v: T) -> Box<T> {
+        Box { value: v }
+    }
+
+    fn get(self) -> T {
+        self.value
+    }
+
+    fn map<U>(self, f: fn(T) -> U) -> Box<U> {
+        Box::wrap(f(self.value))
+    }
+
+    fn same(self) -> Self {
+        Self { value: self.value }
+    }
+}
+
+fn main(sys: Sys) {
+    sys.out.println(identity("same"))
+    sys.out.println(identity(7).to_string())
+    let p = pair_of(1.5)
+    sys.out.println((p.0 + p.1).to_string())
+    let empty: List<Int> = []
+    sys.out.println(first_or(empty, -1).to_string())
+    sys.out.println(first_or(["x", "y"], "none"))
+    let excite = compose(|s: String| s + "!!", |s: String| s + "?")
+    sys.out.println(excite("hi"))
+    let to_text = compose(|n: Int| n * 2, |n: Int| n.to_string())
+    sys.out.println(to_text(21))
+    let b = Box::wrap(20).map(|n| n + 1).map(|n| n.to_string() + "!")
+    sys.out.println(b.same().get())
+    let x: Float = identity(2)
+    sys.out.println(x.to_string())
+}

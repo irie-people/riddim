@@ -1,0 +1,21 @@
+fn swap<A, B>(p: (A, B)) -> (B, A) {
+    (p.1, p.0)
+}
+
+fn main(sys: Sys) {
+    let p = (1, "one")
+    let q = swap(p)
+    sys.out.println(q.0 + " " + q.1.to_string())
+    let (n, word) = p
+    sys.out.println(word + n.to_string())
+    let nested = ((1, 2), (3, (4, 5)))
+    sys.out.println(nested.1.1.0.to_string())
+    sys.out.println((p == (1, "one")).to_string())
+    let (_, (x, _)) = nested
+    sys.out.println(x.to_string())
+    let t3 = (true, 2.5, "s")
+    match t3 {
+        (true, f, s) => sys.out.println(s + f.to_string()),
+        (false, _, _) => sys.out.println("no"),
+    }
+}

@@ -1,0 +1,11 @@
+tab	here "quoted" back\slash $dollar H😀 $ alone
+true
+apple-banana
+true
+cannot parse "x99" as Int
+cannot parse "99999999999999999999" as Int: out of range
+-42
+7
+no newline, then one
+
+é

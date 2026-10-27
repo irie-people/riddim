@@ -1,0 +1,23 @@
+fn yes(sys: Sys, label: String) -> Bool {
+    sys.out.println("checked " + label)
+    true
+}
+
+fn no(sys: Sys, label: String) -> Bool {
+    sys.out.println("checked " + label)
+    false
+}
+
+fn main(sys: Sys) {
+    let a = no(sys, "a") && yes(sys, "b")
+    sys.out.println(a.to_string())
+    let b = yes(sys, "c") || no(sys, "d")
+    sys.out.println(b.to_string())
+    sys.out.println((!b).to_string())
+    let c = true && !false
+    sys.out.println(c.to_string())
+    let d = yes(sys, "e")
+        && no(sys, "f")
+        || yes(sys, "g")
+    sys.out.println(d.to_string())
+}

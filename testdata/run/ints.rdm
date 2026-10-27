@@ -1,0 +1,31 @@
+const BASE: Int = 10
+const MAX_LEN: Int = BASE * BASE + 1
+
+fn main(sys: Sys) {
+    let a = 17
+    let b = 5
+    sys.out.println((a + b).to_string())
+    sys.out.println((a - b).to_string())
+    sys.out.println((a * b).to_string())
+    sys.out.println((a / b).to_string())
+    sys.out.println((a % b).to_string())
+    sys.out.println((-a / b).to_string())
+    sys.out.println((-a % b).to_string())
+    let big = 9223372036854775807
+    sys.out.println((big + 1).to_string())
+    let x: Byte = 250
+    let y: Byte = 10
+    sys.out.println((x + y).to_string())
+    sys.out.println((a > b).to_string())
+    sys.out.println((a == 17 && b != 5).to_string())
+    let mut n = 1
+    n += 2
+    n *= 10
+    n -= 5
+    n /= 5
+    sys.out.println(n.to_string())
+    sys.out.println(0xff.to_string())
+    sys.out.println(1_000_000.to_string())
+    sys.out.println(MAX_LEN.to_string())
+    sys.out.println((-9223372036854775808).to_string())
+}

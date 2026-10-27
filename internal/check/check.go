@@ -91,6 +91,7 @@ type funcCtx struct {
 	result   Type
 	parent   *funcCtx
 	captures []*Local
+	pending  []*Var // parts of a closure's result type, known by the end of its body
 }
 
 type loopCtx struct{ hasBreak bool }

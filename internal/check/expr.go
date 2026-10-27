@@ -695,7 +695,7 @@ func (c *checker) tryExpr(e *syntax.TryExpr) Type {
 				d.Notes = append(d.Notes, fmt.Sprintf("convert the error first, as in `.map_err(|e| ...)?`, to make a %s", Deep(o.Err)))
 			}
 		case *Var:
-			c.bind(o, &Result{c.newVar(e.Span(), "the value type of this closure's Result"), x.Err})
+			c.bind(o, &Result{c.pendingVar(e.Span(), "the value type of this closure's Result"), x.Err})
 		case *Option:
 			d := c.errorf("R0505", e.Span(), "`?` on a Result in a function that returns %s", Deep(o))
 			d.Notes = append(d.Notes, "turn the Result into an Option first: `.ok()?`")
@@ -709,7 +709,7 @@ func (c *checker) tryExpr(e *syntax.TryExpr) Type {
 		switch o := outer.(type) {
 		case *Option:
 		case *Var:
-			c.bind(o, &Option{c.newVar(e.Span(), "the value type of this closure's Option")})
+			c.bind(o, &Option{c.pendingVar(e.Span(), "the value type of this closure's Option")})
 		case *Result:
 			d := c.errorf("R0503", e.Span(), "`?` on an Option in a function that returns %s: turn the Option into a Result first", Deep(o))
 			switch Resolve(o.Err) {
@@ -732,6 +732,15 @@ func (c *checker) tryExpr(e *syntax.TryExpr) Type {
 	}
 	c.errorf("R0301", e.Span(), "`?` needs a Result or an Option, found %s", Deep(xt))
 	return invalid
+}
+
+// pendingVar makes a variable for part of the current closure's result type;
+// it is checked when the closure's body ends rather than at the end of the
+// statement that made it.
+func (c *checker) pendingVar(sp syntax.Span, what string) *Var {
+	v := &Var{origin: sp, what: what}
+	c.fn.pending = append(c.fn.pending, v)
+	return v
 }
 
 func (c *checker) notReturning(e *syntax.TryExpr, outer Type) {

@@ -1,0 +1,64 @@
+fn main(sys: Sys) {
+    let mut i = 0
+    let mut total = 0
+    while i < 10 {
+        i += 1
+        if i % 2 == 0 {
+            continue
+        }
+        total += i
+    }
+    sys.out.println(total.to_string())
+    let mut n = 0
+    loop {
+        n += 1
+        if n == 5 {
+            break
+        }
+    }
+    sys.out.println(n.to_string())
+    let mut s = ""
+    for k in 0..3 {
+        s = s + k.to_string()
+    }
+    for k in 1..=3 {
+        s = s + k.to_string()
+    }
+    sys.out.println(s)
+    let mut found = -1
+    for row in [[1, 2], [3, 4], [5, 6]] {
+        for x in row {
+            if x == 4 {
+                found = x
+                break
+            }
+        }
+        if found > 0 {
+            break
+        }
+    }
+    sys.out.println(found.to_string())
+    for (idx, name) in [(1, "a"), (2, "b")] {
+        sys.out.println(idx.to_string() + name)
+    }
+    let limit = 3
+    let mut count = 0
+    for _ in 0..limit {
+        count += 1
+    }
+    sys.out.println(count.to_string())
+    let mut w = 10
+    while w > 0 && w % 7 != 0 {
+        w -= 1
+    }
+    sys.out.println(w.to_string())
+    let mut steps = 0
+    let stop = loop {
+        steps += 1
+        if steps > 2 {
+            break
+        }
+    }
+    sys.out.println(steps.to_string())
+    let _ = stop
+}

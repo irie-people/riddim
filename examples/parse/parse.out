@@ -1,0 +1,6 @@
+sum: 42
+bad sum failed: reading the list: cannot parse "x8" as Int
+age: 42
+negative age failed: age cannot be negative: -3
+half of the first even: 5
+odd only: nothing

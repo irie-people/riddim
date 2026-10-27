@@ -1,0 +1,8 @@
+fn ratio(a: Int, b: Int) -> Int {
+    a / b
+}
+
+fn main(sys: Sys) {
+    sys.out.println(ratio(6, 3).to_string())
+    sys.out.println(ratio(1, 0).to_string())
+}

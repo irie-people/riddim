@@ -1,0 +1,3 @@
+fn main(sys: Sys) {
+    sys.out.println("hello, world")
+}

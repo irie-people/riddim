@@ -404,6 +404,11 @@ func (c *checker) closure(e *syntax.ClosureExpr, want Type) Type {
 	c.body(e.Body, result, "this closure")
 	c.popScope()
 	saved.restore(c)
+	if len(ctx.pending) > 0 {
+		mark := len(c.vars)
+		c.vars = append(c.vars, ctx.pending...)
+		c.endStmt(mark)
+	}
 	ft := &Func{Params: params, Result: result}
 	c.info.Closures[e] = &ClosureInfo{Type: ft, Captures: ctx.captures}
 	return ft

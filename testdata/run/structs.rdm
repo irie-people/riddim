@@ -1,0 +1,61 @@
+struct Point {
+    x: Int,
+    y: Int,
+}
+
+struct Line {
+    from: Point
+    to: Point
+    label: String
+}
+
+impl Point {
+    fn new(x: Int, y: Int) -> Point {
+        Point { x: x, y: y }
+    }
+
+    fn add(self, o: Point) -> Point {
+        Point { x: self.x + o.x, y: self.y + o.y }
+    }
+
+    fn show(self) -> String {
+        "(" + self.x.to_string() + ", " + self.y.to_string() + ")"
+    }
+}
+
+struct Pair<A, B> {
+    first: A,
+    second: B,
+}
+
+impl<A, B> Pair<A, B> {
+    fn swap(self) -> Pair<B, A> {
+        Pair { first: self.second, second: self.first }
+    }
+
+    fn map_first<C>(self, f: fn(A) -> C) -> Pair<C, B> {
+        Pair { first: f(self.first), second: self.second }
+    }
+}
+
+fn main(sys: Sys) {
+    let p = Point::new(1, 2)
+    let mut q = p
+    q.x = 10
+    sys.out.println(p.show() + " " + q.show())
+    let mut line = Line { from: p, to: q, label: "a" }
+    line.to.y = 20
+    line.label = line.label + "b"
+    line.from.x += 5
+    sys.out.println(line.from.show() + " " + line.to.show() + " " + q.show() + " " + line.label)
+    let r = Point { y: 7, ..p }
+    sys.out.println(r.show())
+    sys.out.println(p.add(q).show())
+    sys.out.println((p == Point::new(1, 2)).to_string())
+    sys.out.println((p == q).to_string())
+    let pair = Pair { first: 1, second: "x" }
+    let s = pair.swap()
+    sys.out.println(s.first + s.second.to_string())
+    let m = pair.map_first(|n| (n * 2).to_string())
+    sys.out.println(m.first + m.second)
+}

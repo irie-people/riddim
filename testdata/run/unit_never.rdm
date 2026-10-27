@@ -1,0 +1,46 @@
+fn log(sys: Sys, s: String) {
+    sys.out.println("log: " + s)
+}
+
+fn fail(msg: String) -> Never {
+    panic(msg)
+}
+
+fn pick(b: Bool) -> Int {
+    if b {
+        return 1
+    }
+    loop {
+        return 2
+    }
+}
+
+fn check(n: Int) -> Int {
+    if n < 0 {
+        fail("negative")
+    }
+    n
+}
+
+fn early(sys: Sys, stop: Bool) {
+    if stop {
+        return
+    }
+    sys.out.println("not stopped")
+}
+
+fn main(sys: Sys) {
+    let _u = log(sys, "one")
+    let f = log
+    f(sys, "two")
+    let units = [1, 2].map(|n| log(sys, n.to_string()))
+    sys.out.println(units.len().to_string())
+    sys.out.println(pick(true).to_string() + pick(false).to_string())
+    sys.out.println(check(5).to_string())
+    let v = if pick(true) == 1 { 10 } else { fail("no") }
+    sys.out.println(v.to_string())
+    early(sys, true)
+    early(sys, false)
+    let unit = ()
+    sys.out.println((unit == ()).to_string())
+}

@@ -1,0 +1,60 @@
+fn apply(f: fn(Int) -> Int, x: Int) -> Int {
+    f(x)
+}
+
+fn twice(f: fn(Int) -> Int) -> fn(Int) -> Int {
+    |x| f(f(x))
+}
+
+fn make_adder(n: Int) -> fn(Int) -> Int {
+    |x| x + n
+}
+
+fn double(x: Int) -> Int {
+    x * 2
+}
+
+fn shout(sys: Sys, s: String) {
+    sys.out.println(s + "!")
+}
+
+fn main(sys: Sys) {
+    let mut count = 1
+    let show = |x: Int| x * count
+    count = 100
+    sys.out.println(show(5).to_string())
+    sys.out.println(apply(double, 21).to_string())
+    sys.out.println(apply(|x| x - 1, 1).to_string())
+    let add3 = make_adder(3)
+    sys.out.println(twice(add3)(10).to_string())
+    let sq = |x: Int| -> Int {
+        let y = x * x
+        y
+    }
+    sys.out.println([1, 2, 3].map(sq).fold(0, |a, b| a + b).to_string())
+    let pairs = [(1, "a"), (2, "b")]
+    let names = pairs.map(|(n, s)| s + n.to_string())
+    sys.out.println(names.fold("", |acc, s| acc + s))
+    let say = |s: String| shout(sys, s)
+    say("hey")
+    let fs = [double, make_adder(1)]
+    sys.out.println(fs.map(|f| f(10)).fold(0, |a, b| a + b).to_string())
+    let printer = |n: Int| sys.out.println(n.to_string())
+    let printed = [7, 8].map(printer)
+    sys.out.println(printed.len().to_string())
+    count += 1
+    sys.out.println(count.to_string())
+    let mut makers: List<fn() -> Int> = []
+    for i in 0..3 {
+        makers = makers.push(|| i * 10)
+    }
+    sys.out.println(makers.map(|f| f()).fold(0, |a, b| a + b).to_string())
+    let mut base = 5
+    let add_base = |x: Int| {
+        let inner = |y: Int| y + base
+        inner(x) + base
+    }
+    base = 0
+    sys.out.println(add_base(1).to_string())
+    sys.out.println(base.to_string())
+}

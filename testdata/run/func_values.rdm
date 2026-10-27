@@ -1,0 +1,38 @@
+enum Shape {
+    Circle(Float),
+    Dot,
+}
+
+fn area(s: Shape) -> Float {
+    match s {
+        Circle(r) => r * r,
+        Dot => 0.0,
+    }
+}
+
+fn inc(x: Int) -> Int {
+    x + 1
+}
+
+fn id<T>(x: T) -> T {
+    x
+}
+
+fn main(sys: Sys) {
+    let circles = [1.0, 2.0].map(Shape::Circle)
+    sys.out.println(circles.map(area).fold(0.0, |a, b| a + b).to_string())
+    let opts = [1, 2].map(Some)
+    sys.out.println(opts.len().to_string())
+    let f = inc
+    sys.out.println(f(1).to_string())
+    let g: fn(Int) -> Int = id
+    sys.out.println(g(9).to_string())
+    let oks: List<Result<String, Error>> = ["a"].map(Ok)
+    sys.out.println(oks.len().to_string())
+    let make_dot = || Shape::Dot
+    sys.out.println(area(make_dot()).to_string())
+    let mk = Shape::Circle
+    sys.out.println(area(mk(3.0)).to_string())
+    let errs = ["bad"].map(error)
+    sys.out.println(errs[0].message())
+}

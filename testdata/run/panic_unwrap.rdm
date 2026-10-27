@@ -1,0 +1,6 @@
+fn main(sys: Sys) {
+    let x: Option<Int> = None
+    sys.out.println("before")
+    sys.out.println(x.unwrap().to_string())
+    sys.out.println("after")
+}

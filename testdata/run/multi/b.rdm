@@ -1,0 +1,14 @@
+struct Point {
+    x: Int,
+    y: Int,
+}
+
+impl Point {
+    fn norm2(self) -> Int {
+        self.x * self.x + self.y * self.y
+    }
+}
+
+fn greet(name: String) -> String {
+    "hello, " + name
+}

@@ -1,0 +1,61 @@
+// Parse: Result, Option, ? and parse_int.
+
+/// Parses every text as an Int, stopping at the first that is not one.
+fn parse_all(texts: List<String>) -> Result<List<Int>, Error> {
+    let mut out: List<Int> = []
+    for t in texts {
+        let n = t.parse_int().map_err(|e| e.context("reading the list"))?
+        out = out.push(n)
+    }
+    Ok(out)
+}
+
+fn sum(texts: List<String>) -> Result<Int, Error> {
+    let nums = parse_all(texts)?
+    Ok(nums.fold(0, |acc, n| acc + n))
+}
+
+/// The first even number, if any.
+fn first_even(nums: List<Int>) -> Option<Int> {
+    let evens = nums.filter(|n| n % 2 == 0)
+    evens.get(0)
+}
+
+fn half_of_first_even(nums: List<Int>) -> Option<Int> {
+    let n = first_even(nums)?
+    Some(n / 2)
+}
+
+fn check_age(text: String) -> Result<Int, Error> {
+    let age = text.parse_int()?
+    if age < 0 {
+        return Err(error("age cannot be negative: " + age.to_string()))
+    }
+    Ok(age)
+}
+
+fn report(sys: Sys, label: String, r: Result<Int, Error>) {
+    match r {
+        Ok(n) => sys.out.println(label + ": " + n.to_string()),
+        Err(e) => sys.out.println(label + " failed: " + e.message()),
+    }
+}
+
+fn main(sys: Sys) -> Result<(), Error> {
+    report(sys, "sum", sum(["1", "2", "39"]))
+    report(sys, "bad sum", sum(["7", "x8"]))
+    report(sys, "age", check_age("42"))
+    report(sys, "negative age", check_age("-3"))
+
+    let nums = parse_all(["3", "10", "4"])?
+    match half_of_first_even(nums) {
+        Some(h) => sys.out.println("half of the first even: " + h.to_string()),
+        None => sys.out.println("no even number"),
+    }
+    let none = half_of_first_even([1, 3])
+    sys.out.println("odd only: " + none.map(|h| h.to_string()).unwrap_or("nothing"))
+
+    let total = sum(["5", "five"]).map_err(|e| e.context("adding the totals"))?
+    sys.out.println("unreachable: " + total.to_string())
+    Ok(())
+}

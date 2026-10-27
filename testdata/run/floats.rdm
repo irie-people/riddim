@@ -1,0 +1,22 @@
+const PI: Float = 3.14159
+const TAU: Float = 2.0 * PI
+
+fn main(sys: Sys) {
+    let x = 6.0
+    sys.out.println(x.to_string())
+    sys.out.println((0.1 + 0.2).to_string())
+    let a = 0.1
+    sys.out.println((a + 0.2).to_string())
+    sys.out.println((1e21).to_string())
+    sys.out.println((7.5 % 2.0).to_string())
+    let half = 1 / 2.0
+    sys.out.println(half.to_string())
+    let y: Float = 3
+    sys.out.println((y * 2).to_string())
+    sys.out.println((-y).to_string())
+    sys.out.println((x > y).to_string())
+    sys.out.println((1.0 / 3.0).to_string())
+    sys.out.println(PI.to_string())
+    sys.out.println(TAU.to_string())
+    sys.out.println((2.5e-3).to_string())
+}

@@ -1,0 +1,8 @@
+fn later() -> Int {
+    todo()
+}
+
+fn main(sys: Sys) {
+    sys.out.println("start")
+    sys.out.println(later().to_string())
+}

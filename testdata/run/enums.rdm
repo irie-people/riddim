@@ -1,0 +1,87 @@
+enum Color { Red, Green, Blue }
+
+impl Color {
+    fn name(self) -> String {
+        match self {
+            Red => "red",
+            Green => "green",
+            Blue => "blue",
+        }
+    }
+
+    fn next(self) -> Color {
+        match self {
+            Red => Color::Green,
+            Green => Color::Blue,
+            Blue => Color::Red,
+        }
+    }
+}
+
+enum Tree<T> {
+    Leaf,
+    Node(Tree<T>, T, Tree<T>),
+}
+
+impl<T> Tree<T> {
+    fn size(self) -> Int {
+        match self {
+            Leaf => 0,
+            Node(l, _, r) => l.size() + 1 + r.size(),
+        }
+    }
+
+    fn values(self) -> List<T> {
+        match self {
+            Leaf => [],
+            Node(l, v, r) => {
+                let mut out = l.values().push(v)
+                for x in r.values() {
+                    out = out.push(x)
+                }
+                out
+            }
+        }
+    }
+}
+
+fn insert(t: Tree<Int>, x: Int) -> Tree<Int> {
+    match t {
+        Leaf => Tree::Node(Tree::Leaf, x, Tree::Leaf),
+        Node(l, v, r) if x < v => Tree::Node(insert(l, x), v, r),
+        Node(l, v, r) => Tree::Node(l, v, insert(r, x)),
+    }
+}
+
+enum Expr {
+    Num(Int),
+    Add(Expr, Expr),
+    Mul(left: Expr, right: Expr),
+    Neg(Expr),
+}
+
+fn eval(e: Expr) -> Int {
+    match e {
+        Num(n) => n,
+        Add(a, b) => eval(a) + eval(b),
+        Mul(a, b) => eval(a) * eval(b),
+        Neg(a) => -eval(a),
+    }
+}
+
+fn main(sys: Sys) {
+    let c = Color::Red
+    sys.out.println(c.name() + " " + c.next().name() + " " + c.next().next().next().name())
+    sys.out.println((c == Color::Red).to_string() + " " + (c.next() == Color::Red).to_string())
+    let mut t: Tree<Int> = Tree::Leaf
+    for x in [5, 2, 8, 1, 9, 3] {
+        t = insert(t, x)
+    }
+    sys.out.println(t.size().to_string())
+    let text = t.values().fold("", |acc, v| if acc == "" { v.to_string() } else { acc + "," + v.to_string() })
+    sys.out.println(text)
+    let e = Expr::Add(Expr::Num(2), Expr::Mul(Expr::Num(3), Expr::Neg(Expr::Num(4))))
+    sys.out.println(eval(e).to_string())
+    sys.out.println((Expr::Num(1) == Expr::Num(1)).to_string())
+    sys.out.println((e == Expr::Num(1)).to_string())
+}

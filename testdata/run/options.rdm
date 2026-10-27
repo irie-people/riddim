@@ -1,0 +1,38 @@
+fn div(a: Int, b: Int) -> Result<Int, Error> {
+    if b == 0 {
+        return Err(error("divide by zero"))
+    }
+    Ok(a / b)
+}
+
+fn main(sys: Sys) {
+    let some = Some(4)
+    let none: Option<Int> = None
+    sys.out.println(some.is_some().to_string() + " " + none.is_none().to_string())
+    sys.out.println(some.unwrap_or(0).to_string() + " " + none.unwrap_or(0).to_string())
+    sys.out.println(some.map(|x| x * 10).unwrap_or(-1).to_string())
+    sys.out.println(some.and_then(|x| if x > 3 { Some(x) } else { None }).is_some().to_string())
+    sys.out.println(none.ok_or("empty").is_err().to_string())
+    match some.ok_or("empty") {
+        Ok(v) => sys.out.println("ok " + v.to_string()),
+        Err(e) => sys.out.println(e),
+    }
+    sys.out.println(some.expect("has value").to_string())
+    let good = div(10, 2)
+    let bad = div(1, 0)
+    sys.out.println(good.is_ok().to_string() + " " + bad.is_err().to_string())
+    sys.out.println(good.unwrap_or(0).to_string() + " " + bad.unwrap_or(-1).to_string())
+    sys.out.println(good.map(|x| x + 1).unwrap().to_string())
+    match bad.map_err(|e| e.context("computing")) {
+        Ok(_) => sys.out.println("?"),
+        Err(e) => sys.out.println(e.message()),
+    }
+    sys.out.println(good.and_then(|x| div(x, 0)).is_err().to_string())
+    sys.out.println(good.ok().unwrap_or(0).to_string())
+    sys.out.println(bad.ok().is_none().to_string())
+    let e = error("base").context("middle").context("top")
+    sys.out.println(e.message())
+    sys.out.println((some == Some(4)).to_string() + " " + (none == None).to_string())
+    let r: Result<Int, String> = Err("no")
+    sys.out.println((r == Err("no")).to_string())
+}

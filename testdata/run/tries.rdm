@@ -1,0 +1,40 @@
+fn parse_pair(a: String, b: String) -> Result<(Int, Int), Error> {
+    Ok((a.parse_int()?, b.parse_int()?))
+}
+
+fn second_digit(xs: List<Int>) -> Option<Int> {
+    let x = xs.get(1)?
+    Some(x % 10)
+}
+
+fn sum_all(texts: List<String>) -> Result<Int, Error> {
+    let nums = texts.map(|t| t.parse_int())
+    let mut total = 0
+    for r in nums {
+        total += r?
+    }
+    Ok(total)
+}
+
+fn main(sys: Sys) -> Result<(), Error> {
+    let p = parse_pair("3", "4")?
+    sys.out.println((p.0 * p.1).to_string())
+    match parse_pair("3", "four") {
+        Ok(_) => sys.out.println("unexpected"),
+        Err(e) => sys.out.println("pair: " + e.message()),
+    }
+    sys.out.println(second_digit([5, 47]).unwrap_or(-1).to_string())
+    sys.out.println(second_digit([5]).unwrap_or(-1).to_string())
+    sys.out.println(sum_all(["1", "2", "3"])?.to_string())
+    let checked = ["10", "x"].map(|t| {
+        let n = t.parse_int()?
+        Ok(n * 2)
+    })
+    for c in checked {
+        match c {
+            Ok(n) => sys.out.println(n.to_string()),
+            Err(e) => sys.out.println(e.message()),
+        }
+    }
+    Ok(())
+}

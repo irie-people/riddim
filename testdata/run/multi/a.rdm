@@ -1,0 +1,5 @@
+fn main(sys: Sys) {
+    let p = Point { x: 3, y: 4 }
+    sys.out.println(p.norm2().to_string())
+    sys.out.println(greet("multi"))
+}

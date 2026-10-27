@@ -1,0 +1,35 @@
+struct Item {
+    type: String,
+    len: Int,
+    range: Int,
+}
+
+fn len(xs: List<Int>) -> Int {
+    xs.len()
+}
+
+fn string(n: Int) -> String {
+    n.to_string()
+}
+
+fn main(sys: Sys) {
+    let var = 3
+    let func = |x: Int| x + var
+    let map = [1, 2]
+    let fmt = "formatted"
+    let x = 1
+    let x = x + 1
+    let x = x * 10
+    let item = Item { type: "book", len: 2, range: 5 }
+    sys.out.println(string(len(map)) + " " + func(1).to_string() + " " + fmt + " " + x.to_string() + " " + item.type + item.len.to_string() + item.range.to_string())
+    let strconv = 7
+    let errors = strconv + 1
+    sys.out.println(errors.to_string())
+    let tmp = 1
+    let res = Some(tmp)
+    let subj = match res {
+        Some(v) => v + 1,
+        None => 0,
+    }
+    sys.out.println(subj.to_string())
+}
