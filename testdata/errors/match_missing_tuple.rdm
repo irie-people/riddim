@@ -1,0 +1,14 @@
+fn both(p: (Bool, Bool)) -> Int {
+    match p {
+        (true, _) => 1,
+        (false, true) => 2,
+    }
+}
+
+fn digit(n: Int) -> Int {
+    match n { 0 => 0, 1 => 1 }
+}
+
+fn main() {
+    let _ = both((true, false)) + digit(1)
+}

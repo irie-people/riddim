@@ -1,0 +1,7 @@
+fn main() {
+    let Some(x) = Some(1)
+    for (1, y) in [(1, 2)] {
+        let _ = y
+    }
+    let _ = x
+}

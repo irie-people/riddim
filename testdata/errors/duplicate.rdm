@@ -1,0 +1,18 @@
+struct Point {
+    x: Int,
+    x: Int,
+}
+
+fn area() -> Int {
+    1
+}
+
+fn area() -> Int {
+    2
+}
+
+struct Option {
+}
+
+fn main() {
+}

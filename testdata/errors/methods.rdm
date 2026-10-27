@@ -1,0 +1,25 @@
+struct Point {
+    x: Int,
+}
+
+impl Point {
+    fn origin() -> Point {
+        Point { x: 0 }
+    }
+}
+
+impl Int {
+    fn double(self) -> Int {
+        self * 2
+    }
+}
+
+fn main() {
+    let p = Point::origin()
+    let a = p.origin()
+    let b = p.norm()
+    let c = "abc".trim()
+    let _ = a
+    let _ = b
+    let _ = c
+}

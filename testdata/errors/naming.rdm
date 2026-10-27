@@ -1,0 +1,12 @@
+struct point {
+    X: Int,
+}
+
+fn getX(p: point) -> Int {
+    p.X
+}
+
+fn main() {
+    let myValue = getX(point { X: 1 })
+    let _ = myValue
+}

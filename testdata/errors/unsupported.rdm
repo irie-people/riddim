@@ -1,0 +1,7 @@
+fn main() {
+    let n = 1
+    let s = "n = ${n}"
+    let f = n as Float
+    let _ = s
+    let _ = f
+}

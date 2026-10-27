@@ -1,0 +1,25 @@
+struct Point<T> {
+    x: T,
+    y: T,
+}
+
+impl<T> Point<T> {
+    fn map<U>(self, f: fn(T) -> U) -> Point<U> {
+        Point { x: f(self.x), y: f(self.y) }
+    }
+}
+
+fn parse(texts: List<String>) -> Result<Point<Int>, Error> {
+    let x = texts.get(0).ok_or(error("no x"))?.parse_int()?
+    let y = texts.get(1).ok_or(error("no y"))?.parse_int()?
+    Ok(Point { x: x, y: y })
+}
+
+fn main(sys: Sys) -> Result<(), Error> {
+    let mut scale = 2
+    let scaled = parse(["3", "4"])?.map(|v| v * scale)
+    scale = 0
+    let p = scaled.map(|v| v.to_string())
+    sys.out.println(p.x + "," + p.y + " " + scale.to_string())
+    Ok(())
+}

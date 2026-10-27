@@ -1,0 +1,11 @@
+fn main() {
+    let x = 1
+    let (a, b) = (1, 2)
+    let mut c = 0
+    c = 5
+    let _ = a
+    match Some(3) {
+        Some(n) => {}
+        None => {}
+    }
+}

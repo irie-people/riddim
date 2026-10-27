@@ -1,0 +1,35 @@
+enum Shape {
+    Circle(radius: Float),
+    Rect(w: Float, h: Float),
+    Empty,
+}
+
+impl Shape {
+    fn area(self) -> Float {
+        match self {
+            Circle(r) => 3.14159 * r * r,
+            Rect(w, h) => w * h,
+            Empty => 0.0,
+        }
+    }
+}
+
+enum Color { Red, Green }
+
+fn describe(s: Shape, c: Color) -> String {
+    let size = match s {
+        Circle(r) if r > 10.0 => "big circle",
+        Circle(_) | Empty => "small",
+        Rect(_, _) => "rect",
+    }
+    let color = match c {
+        Red => "red",
+        Green => "green",
+    }
+    size + " " + color
+}
+
+fn main(sys: Sys) {
+    let s = Shape::Circle(2.0)
+    sys.out.println(describe(s, Color::Red) + " " + s.area().to_string())
+}

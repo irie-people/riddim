@@ -15,6 +15,13 @@ import (
 func (c *checker) expr(e syntax.Expr, want Type) Type {
 	t := c.expr0(e, want)
 	c.info.Types[e] = t
+	if isInvalid(t) {
+		// An expression with an error poisons the type it was to fix.
+		if v, ok := Resolve(want).(*Var); ok {
+			v.ref = invalid
+		}
+		return t
+	}
 	if want != nil && t != nil && !isInvalid(t) && !isInvalid(want) && !c.assignable(t, want) {
 		c.mismatch(e, want, t)
 		return invalid
@@ -101,6 +108,8 @@ func (c *checker) expr0(e syntax.Expr, want Type) Type {
 		var elem Type
 		if l, ok := Resolve(want).(*List); ok {
 			elem = l.Elem
+		} else if isInvalid(want) {
+			elem = invalid
 		} else {
 			elem = c.newVar(e.Span(), "the element type of this list")
 		}
@@ -273,6 +282,9 @@ func (c *checker) fresh(params []*TypeParam, sp syntax.Span, of string) []Type {
 }
 
 func (c *checker) wantElem(want Type, sp syntax.Span, what string) Type {
+	if isInvalid(want) {
+		return invalid
+	}
 	if o, ok := Resolve(want).(*Option); ok {
 		return o.Elem
 	}
@@ -285,6 +297,9 @@ func (c *checker) wantElem(want Type, sp syntax.Span, what string) Type {
 }
 
 func (c *checker) wantResult(want Type, sp syntax.Span, isOk bool) (Type, Type) {
+	if isInvalid(want) {
+		return invalid, invalid
+	}
 	w := Resolve(want)
 	if f, ok := w.(*Func); ok {
 		w = Resolve(f.Result)

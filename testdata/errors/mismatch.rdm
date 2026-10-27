@@ -1,0 +1,16 @@
+fn half(x: Float) -> Float {
+    x / 2
+}
+
+fn main() {
+    let a: Int = "one"
+    let i = 1
+    let b = i + 2.5
+    let c = half(3)
+    let d: String = if true { "x" } else { 5 }
+    let _ = a
+    let _ = i
+    let _ = b
+    let _ = c
+    let _ = d
+}

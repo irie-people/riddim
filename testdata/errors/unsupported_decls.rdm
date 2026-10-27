@@ -1,0 +1,10 @@
+use go "strings"
+
+fn count(m: Map<String, Int>) -> Int {
+    0
+}
+
+fn main() {
+    if let Some(x) = None {
+    }
+}

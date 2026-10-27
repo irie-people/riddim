@@ -1,0 +1,22 @@
+fn add(a: Int, b: Int) -> Int {
+    a + b
+}
+
+enum Shape {
+    Rect(Float, Float),
+    Empty,
+}
+
+fn main() {
+    let x = add(1)
+    let s = Shape::Rect(1.0)
+    let xs: List<Int, Int> = []
+    let e = match Shape::Empty {
+        Rect(w) => w,
+        Empty => 0.0,
+    }
+    let _ = x
+    let _ = s
+    let _ = xs
+    let _ = e
+}

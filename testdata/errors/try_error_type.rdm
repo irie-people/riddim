@@ -1,0 +1,8 @@
+fn parse(s: String) -> Result<Int, String> {
+    let n = s.parse_int()?
+    Ok(n)
+}
+
+fn main() {
+    let _ = parse("1")
+}

@@ -1,0 +1,12 @@
+fn first(xs: List<Int>) -> Option<Int> {
+    let n = "1".parse_int()?
+    xs.get(n)
+}
+
+fn main() {
+    let n = "1".parse_int()?
+    let _ = n
+    let _ = first([1])
+    let k = 5?
+    let _ = k
+}

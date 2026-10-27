@@ -1,0 +1,15 @@
+enum Shape {
+    Circle(Float),
+    Rect(Float, Float),
+    Empty,
+}
+
+fn area(s: Shape) -> Float {
+    match s {
+        Circle(r) => 3.0 * r * r,
+    }
+}
+
+fn main(sys: Sys) {
+    sys.out.println(area(Shape::Empty).to_string())
+}

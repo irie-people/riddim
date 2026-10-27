@@ -242,8 +242,10 @@ func (c *checker) checkConst(k *ConstObj) {
 	case 2:
 		return
 	case 1:
-		c.errorf("R0308", k.Decl.Name.Span(), "constant `%s` refers to itself", k.Name)
-		k.state = 2
+		if !k.cyclic {
+			c.errorf("R0308", k.Decl.Name.Span(), "constant `%s` refers to itself", k.Name)
+			k.cyclic = true
+		}
 		return
 	}
 	k.state = 1
@@ -263,13 +265,14 @@ func (c *checker) checkConst(k *ConstObj) {
 	}
 	saved := saveCtx(c)
 	c.fn, c.scope, c.loops, c.tparams = nil, nil, nil, nil
+	errs := len(c.errs)
 	t := c.expr(v, k.Type)
 	saved.restore(c)
 	if isInvalid(t) {
 		return
 	}
 	k.Value = c.consts[v]
-	if k.Value == nil {
+	if k.Value == nil && !k.cyclic && len(c.errs) == errs {
 		c.errorf("R0308", v.Span(), "the value of a constant must be literals and constants combined with operators")
 	}
 }

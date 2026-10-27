@@ -1,0 +1,6 @@
+fn main() {
+    let s = Sys { }
+    let o = Out::new()
+    let _ = s
+    let _ = o
+}

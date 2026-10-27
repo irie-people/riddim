@@ -111,9 +111,10 @@ type ConstObj struct {
 	Name  string
 	Decl  *syntax.ConstDecl
 	Type  Type
-	Value *Const
-	state int // 0 unchecked, 1 checking, 2 done
-	refs  []syntax.Span
+	Value  *Const
+	state  int // 0 unchecked, 1 checking, 2 done
+	cyclic bool
+	refs   []syntax.Span
 }
 
 // A Const is the value of a constant expression.

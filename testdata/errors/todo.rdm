@@ -1,0 +1,7 @@
+fn later() -> Int {
+    todo()
+}
+
+fn main() {
+    let _ = later()
+}

@@ -1,0 +1,11 @@
+const BIG: Int = 9223372036854775807
+const TOO_BIG: Int = BIG + 1
+const LIST: List<Int> = [1]
+const LOOP: Int = LOOP + 1
+
+fn main() {
+    let x = 10 / 0
+    let b: Byte = 300
+    let _ = x
+    let _ = b
+}

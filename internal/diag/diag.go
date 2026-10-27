@@ -164,9 +164,12 @@ func renderText(b *strings.Builder, d Diagnostic, src LineSource) {
 	}
 	for _, f := range d.Fixes {
 		var parts []string
+		seen := map[string]bool{}
 		for _, e := range f.Edits {
 			for _, l := range strings.Split(e.Text, "\n") {
-				if l = strings.TrimSpace(l); l != "" {
+				l = strings.TrimPrefix(strings.TrimSpace(l), ", ")
+				if l != "" && !seen[l] {
+					seen[l] = true
 					parts = append(parts, "`"+l+"`")
 				}
 			}

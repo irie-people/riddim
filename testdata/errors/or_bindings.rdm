@@ -1,0 +1,21 @@
+enum Shape {
+    Circle(Float),
+    Rect(Float, Float),
+}
+
+fn size(s: Shape) -> Float {
+    match s {
+        Circle(r) | Rect(w, _) => 1.0,
+    }
+}
+
+fn pick(p: (Int, String)) -> Int {
+    match p {
+        (n, _) | (_, n) => 1,
+    }
+}
+
+fn main() {
+    let _ = size(Shape::Circle(1.0)) + 1.0
+    let _ = pick((1, "a"))
+}

@@ -1,0 +1,19 @@
+struct Node {
+    value: Int,
+    next: Option<Node>,
+}
+
+struct A {
+    b: B,
+}
+
+struct B {
+    a: (Int, A),
+}
+
+struct Tree {
+    children: List<Tree>,
+}
+
+fn main() {
+}

@@ -1,0 +1,19 @@
+fn sign(n: Int) -> String {
+    match n {
+        _ => "any",
+        0 => "zero",
+    }
+}
+
+fn opt(o: Option<Int>) -> Int {
+    match o {
+        Some(_) => 1,
+        None => 0,
+        Some(5) => 5,
+    }
+}
+
+fn main() {
+    let _ = sign(1)
+    let _ = opt(None)
+}

@@ -1,0 +1,12 @@
+fn main() {
+    break
+}
+
+fn other() {
+    loop {
+        let f = || {
+            continue
+        }
+        break
+    }
+}

@@ -1,0 +1,8 @@
+fn first(xs: List<Int>) -> Result<Int, Error> {
+    let x = xs.get(0)?
+    Ok(x)
+}
+
+fn main() {
+    let _ = first([1])
+}

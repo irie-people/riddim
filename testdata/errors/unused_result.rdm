@@ -1,0 +1,13 @@
+fn parse(s: String) -> Result<Int, Error> {
+    s.parse_int()
+}
+
+fn run() -> Result<(), Error> {
+    parse("1")
+    Ok(())
+}
+
+fn main() {
+    parse("2")
+    let _ = run()
+}

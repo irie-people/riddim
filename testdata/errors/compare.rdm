@@ -1,0 +1,9 @@
+fn main() {
+    let a = [1, 2] == [1, 2]
+    let f = |x: Int| x
+    let g = f == f
+    let b = true < false
+    let _ = a
+    let _ = g
+    let _ = b
+}

@@ -1,0 +1,5 @@
+fn main() {
+    let a = Some(1).unwrap()
+    let b = "5".parse_int().expect("a number")
+    let _ = a + b
+}

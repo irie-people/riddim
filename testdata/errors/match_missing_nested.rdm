@@ -1,0 +1,11 @@
+fn label(r: Result<Option<Int>, Error>) -> String {
+    match r {
+        Ok(Some(n)) if n > 0 => "positive",
+        Ok(Some(_)) => "not positive",
+        Err(e) => e.message(),
+    }
+}
+
+fn main() {
+    let _ = label(Ok(None))
+}

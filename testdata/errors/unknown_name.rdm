@@ -1,0 +1,15 @@
+fn total(xs: List<Int>) -> Int {
+    xs.fold(0, |acc, x| acc + x)
+}
+
+fn main(sys: Sys) {
+    let t = totl([1, 2])
+    sys.out.println(t.to_string())
+    let c = Circle(1.0)
+    let _ = c
+    let p: Pointt = 5
+}
+
+enum Shape {
+    Circle(Float),
+}

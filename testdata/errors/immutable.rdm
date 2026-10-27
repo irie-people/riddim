@@ -1,0 +1,25 @@
+struct Point {
+    x: Int,
+}
+
+impl Point {
+    fn reset(self) -> Point {
+        self.x = 0
+        self
+    }
+}
+
+fn main() {
+    let n = 1
+    n = 2
+    let mut m = 1
+    let f = || {
+        m = 5
+        m
+    }
+    let xs = [1, 2]
+    xs[0] = 5
+    let _ = f
+    let _ = xs
+    let _ = m
+}
