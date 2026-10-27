@@ -79,6 +79,14 @@ const (
 	MINUSEQ  // -=
 	STAREQ   // *=
 	SLASHEQ  // /=
+
+	// Tokens that are not Riddim but that Rust and Go code brings along, so
+	// the parser can report them as the habits they are.
+	COLONEQ  // := (Go)
+	AMP      // & before a value or type: a reference (Rust)
+	INCR     // ++ ending a statement (Go)
+	DECR     // -- ending a statement (Go)
+	LIFETIME // 'a (Rust); the lexer reports and drops these
 )
 
 var keywords = map[string]Kind{
@@ -96,6 +104,7 @@ var kindText = map[Kind]string{
 	GT: ">", GE: ">=", PLUS: "+", MINUS: "-", STAR: "*", SLASH: "/", PERCENT: "%",
 	NOT: "!", ANDAND: "&&", OROR: "||", PIPE: "|", QUESTION: "?", PLUSEQ: "+=",
 	MINUSEQ: "-=", STAREQ: "*=", SLASHEQ: "/=",
+	COLONEQ: ":=", AMP: "&", INCR: "++", DECR: "--", LIFETIME: "lifetime",
 }
 
 func init() {
@@ -167,7 +176,7 @@ func (t Token) describe() string {
 func canEnd(k Kind) bool {
 	switch k {
 	case IDENT, INT, FLOAT, STRING, STRTAIL, RPAREN, RBRACK, RBRACE, QUESTION,
-		RETURN, BREAK, CONTINUE, SELF, SELFTYPE, TRUE, FALSE:
+		RETURN, BREAK, CONTINUE, SELF, SELFTYPE, TRUE, FALSE, INCR, DECR:
 		return true
 	}
 	return false

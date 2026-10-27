@@ -1,0 +1,17 @@
+struct Holder<'a> {
+    name: String,
+}
+
+fn pick<'a, T>(x: T, y: T) -> T {
+    x
+}
+
+fn main() {
+    let h: Holder<'static> = Holder { name: "a" }
+    'outer: loop {
+        loop {
+            break 'outer
+        }
+    }
+    let _ = pick(h, h)
+}

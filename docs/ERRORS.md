@@ -2,15 +2,17 @@
 
 Every diagnostic has a stable code, an exact span and, where it can, a fix that applies mechanically. `riddim check --json` prints them as data (DESIGN §7.1); `riddim check` prints the same as text. Codes starting with R are errors; codes starting with W are warnings, which do not stop a build.
 
-The compiler stops after the first stage that reports errors: syntax (R01xx), then names and types (R02xx, R03xx, R05xx, R06xx, R0403, R0404), then patterns (R0401, R0402). W0001 waits until there are no errors.
+The compiler stops after the first stage that reports errors: syntax (R01xx), then names and types (R02xx, R03xx, R05xx, R06xx, R0403, R0404, and the habits R0109, R0110, R0113, R0114 and R0117 to R0120 that need names or types to tell), then patterns (R0401, R0402). W0001 waits until there are no errors.
 
-This file covers milestone M1. Each entry shows the mistake, then the fix.
+R0108 to R0124 are habits carried over from Rust or Go (DESIGN §7.2). Each has its own code and, where the rewrite is mechanical, a fix; the compiler then reads on as if the fix were made, so one round reports every habit in a stage.
+
+This file covers milestone M2. Each entry shows the mistake, then the fix.
 
 ## R0101 unexpected character
 
-A character Riddim does not use: `&`, `'`, `#`, `@`, `^`, `~`, or `$` outside a string.
+A character Riddim does not use: `&` between two values (no bitwise operators), `'` (strings use double quotes), `#`, `@`, `^`, `~`, or `$` outside a string.
 
-    let both = a & b       // mistake: no bitwise operators or references
+    let both = a & b       // mistake: no bitwise operators
     let both = a && b      // fix
 
 ## R0102 unterminated string
@@ -36,17 +38,17 @@ Digit separators go between digits; letters cannot follow a number.
 
 ## R0105 syntax error
 
-The parser expected something else. The message says what it expected and what it found; after an error the parser moves on to the next top-level declaration.
+The parser expected something else. The message says what it expected and what it found; after an error the parser moves on to the next top-level declaration. Go's `for {` and `for cond {` get a fix to `loop {` and `while cond {`.
 
     fn area(w, h) -> Int { w * h }
     fn area(w: Int, h: Int) -> Int { w * h }    // fix: parameters are annotated
 
 ## R0106 not supported in this version
 
-String interpolation, `as`, `if let`, `use go`, and the `Map`, `Env`, `Fs` and `Clock` types come in later milestones.
+`use go` and the `Env`, `Fs` and `Clock` capabilities come in milestone M3.
 
-    let s = "total: ${n}"
-    let s = "total: " + n.to_string()           // fix
+    fn load(fs: Fs) -> String { "" }
+    fn load(text: String) -> String { text }    // fix: take the contents as a value
 
 ## R0107 break or continue outside a loop
 
@@ -54,6 +56,126 @@ String interpolation, `as`, `if let`, `use go`, and the `Map`, `Env`, `Fs` and `
 
     xs.map(|x| { if x == 0 { break }; x })
     for x in xs { if x == 0 { break } }          // fix: use a loop
+
+## R0108 Go's var or :=
+
+Riddim declares a binding with `let`, and one that is reassigned with `let mut`. Go's `for i := 0; i < n; i++` is a range loop. Go's `n, err := f()` is `let n = f()?`, since a function that can fail returns a Result (no fix).
+
+    var total = 0
+    let mut total = 0                            // fix; `n := 5` becomes `let n = 5`
+
+## R0109 nil
+
+Riddim has no nil: a value that may be absent is an Option. The fix writes `None`, `Ok(())` where a `Result<(), E>` is expected, and `x.is_none()` for `x == nil` on an Option.
+
+    return nil
+    return None                                  // fix
+
+## R0110 Rust or Go type name
+
+Riddim's primitive types are `Int` (64-bit signed), `Float`, `Bool`, `String`, `Byte` and `Error`. The fix renames `i32`, `u64`, `usize`, `int`, `f64`, `float64`, `bool`, `str`, `string`, `u8`, `byte` and the like; `char` becomes String.
+
+    fn area(w: i32, h: f64) -> f64
+    fn area(w: Int, h: Float) -> Float                                            // fix
+
+## R0111 reference or pointer
+
+Riddim has no references or pointers: every value is copied when it is bound, passed or returned. The fix deletes `&`, `&mut` and `*`, writes `&str` as `String`, `&self` as `self`, and `Box<T>` or `Box::new(x)` as the value.
+
+    fn len_of(s: &str) -> Int
+    fn len_of(s: String) -> Int                  // fix
+
+## R0112 lifetime or loop label
+
+Nothing is borrowed, so there are no lifetimes; `break` and `continue` leave the innermost loop, so there are no labels. The fix deletes them.
+
+    fn first<'a>(xs: &'a List<Int>) -> Int
+    fn first(xs: &List<Int>) -> Int                                              // fix (then R0111)
+
+## R0113 Vec, vec! or a Go slice
+
+Riddim's list is `List<T>`, written `[1, 2]`; the empty list is `[]`. The fix rewrites `Vec<T>`, `vec![...]`, `Vec::new()`, Go's `[]T` and Rust's `[T; N]`. `vec![x; n]` has no fix: build the list in a loop.
+
+    let xs: Vec<i32> = vec![1, 2]
+    let xs: List<i32> = [1, 2]                                                   // fix (then R0110)
+
+## R0114 HashMap or a Go map
+
+Riddim's map is `Map<K, V>`, made with `Map::new()` and iterated in insertion order. The fix rewrites `HashMap`, `BTreeMap`, `HashMap::new()` and Go's `map[K]V`.
+
+    let m: HashMap<String, Int> = HashMap::new()
+    let m: Map<String, Int> = Map::new()                                         // fix
+
+## R0115 macro
+
+Riddim has no macros. The fix rewrites `println!`, `print!`, `eprintln!` and `eprint!` to an Out capability's `println` or `print` (from a `Sys` or `Out` parameter, else `sys.out`), `format!` to interpolation, `panic!` and `unreachable!` to `panic(...)`, and `todo!` and `unimplemented!` to `todo()`. A format spec such as `{:.2}`, and other macros, have no fix.
+
+    println!("{} items, total {}", n, total)
+    sys.out.println("${n} items, total ${total}")                                // fix
+
+## R0116 type arguments on a call
+
+Calls take no type arguments: Riddim infers them. The fix deletes `::<...>`; where inference needs help, annotate the binding.
+
+    let n = identity::<Int>(5)
+    let n = identity(5)                                                          // fix
+
+## R0117 .iter(), .into_iter() or .collect()
+
+`for` and the List and Map methods work on the value itself; there are no iterators. The fix deletes the call.
+
+    let ys = xs.iter().map(|x| x * 2).collect()
+    let ys = xs.map(|x| x * 2)                                                   // fix
+
+## R0118 .clone()
+
+Values are copied when they are bound, passed or returned, so nothing needs cloning. The fix deletes `.clone()`, `.cloned()`, `.copied()` and `.to_vec()`.
+
+    let q = p.clone()
+    let q = p                                                                    // fix
+
+## R0119 String::from or .to_owned()
+
+A String is a value. The fix writes the string itself for `String::from(s)`, `.to_owned()` and `.as_str()`, and `""` for `String::new()`.
+
+    let s = String::from("hello")
+    let s = "hello"                                                              // fix
+
+## R0120 if err != nil
+
+Riddim has no nil, and errors are not separate results: a function that can fail returns a Result. `?` returns its error from the enclosing function; `match` handles it. No fix: the call and the check are separate statements.
+
+    if err != nil { return err }
+    let n = text.parse_int()?                    // fix: `?` on the call that can fail
+
+## R0121 pub
+
+A program is one package, so every declaration is visible in all its files. The fix deletes `pub` and `pub(crate)`.
+
+    pub fn area(self) -> Float
+    fn area(self) -> Float                                                       // fix
+
+## R0122 attribute
+
+Riddim has no attributes: nothing needs deriving, since `==` works on every comparable type and values are always copied. The fix deletes `#[...]` and `#![...]`, with the line when nothing else is on it.
+
+    #[derive(Debug, Clone, PartialEq)]
+    struct Point { x: Int }
+    struct Point { x: Int }                                                      // fix
+
+## R0123 ++ or --
+
+Riddim has no increment operators. The fix writes `+= 1` or `-= 1`.
+
+    count++
+    count += 1                                                                   // fix
+
+## R0124 func
+
+Riddim declares a function with `fn`. The fix renames `func`.
+
+    func main() { }
+    fn main() { }                                                                // fix
 
 ## R0201 unknown name
 
@@ -78,11 +200,11 @@ Types, variants and type parameters are UpperCamelCase; functions, variables, fi
 
 ## R0301 mismatched types
 
-A value of one type where another is expected: an argument, an annotation, a branch, an operand, a call of something that is not a function. Riddim has no implicit conversions; an integer literal may stand for a Float or a Byte where one is expected.
+A value of one type where another is expected: an argument, an annotation, a branch, an operand, a call of something that is not a function, `as` between types other than Int, Float and Byte, or an interpolated value that is not an Int, Float, Bool, Byte or String. Riddim has no implicit conversions; an integer literal may stand for a Float or a Byte where one is expected. Where an Int or a Byte meets a Float, or a Byte an Int, the fix converts it with `as`.
 
     let count = 2
     let total = count * 1.5                      // mistake: count is an Int
-    let count = 2.0                              // fix: make it a Float (`as` comes in a later version)
+    let total = count as Float * 1.5             // fix
 
 ## R0302 wrong number of arguments
 
@@ -100,28 +222,28 @@ A struct literal misses a field or names an unknown one, a field is given twice,
 
 ## R0304 method error
 
-The type has no such method, an associated function is called on a value, or an impl block names a built-in type.
+The type has no such method, an associated function is called on a value, an impl block names a built-in type, or a list method is used on elements it does not work on: `sort`, `min` and `max` need Int, Float or String, `sum` Int or Float, `join` String (its fix maps the elements with `to_string`).
 
     let p = q.origin()                           // origin has no self
     let p = Point::origin()                      // fix
 
 ## R0305 not comparable
 
-`==` and `!=` work on Int, Float, Bool, String, Byte and on tuples, structs, enums, Option and Result made of them; not on List, functions, Error, capabilities or type parameters. `<`, `<=`, `>`, `>=` work on Int, Float, Byte and String.
+`==` and `!=` work on Int, Float, Bool, String, Byte and on tuples, structs, enums, Option and Result made of them; not on List, Map, functions, Error, capabilities or type parameters. `<`, `<=`, `>`, `>=` work on Int, Float, Byte and String. A Map's keys, and the elements `contains` and `index_of` look for, must be comparable too.
 
     if xs == ys { }
     if xs.len() == ys.len() { }                  // fix
 
 ## R0306 type annotation needed
 
-Inference flows forward: a `let` gets its type from its value and annotation, never from later lines. A closure parameter needs a type unless the call it is passed to gives one.
+Inference flows forward: a `let` gets its type from its value and annotation, never from later lines. A closure parameter needs a type unless the call it is passed to gives one. `Map::new()` needs its key and value types: `let m: Map<String, Int> = Map::new()`.
 
     let xs = []
     let xs: List<Int> = []                       // fix
 
 ## R0307 recursive struct
 
-A struct cannot contain itself by value, directly or through Option, Result or a tuple. Use an enum, which may be recursive, or a List.
+A struct cannot contain itself by value, directly or through Option, Result, Map or a tuple. Use an enum, which may be recursive, or a List.
 
     struct Node { next: Option<Node> }
     enum Chain { End, Link(Int, Chain) }         // fix

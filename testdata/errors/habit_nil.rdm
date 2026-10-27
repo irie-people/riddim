@@ -1,0 +1,23 @@
+fn find(xs: List<Int>, x: Int) -> Option<Int> {
+    for i in 0..xs.len() {
+        if xs[i] == x {
+            return Some(i)
+        }
+    }
+    return nil
+}
+
+fn save(path: String) -> Result<(), Error> {
+    nil
+}
+
+fn main() {
+    let found: Option<Int> = nil
+    let r = find([1, 2], 2)
+    if r == nil {
+        let _ = found
+    }
+    if find([3], 1) != nil {
+        let _ = save("a.txt")
+    }
+}

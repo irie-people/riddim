@@ -1,0 +1,10 @@
+fn identity<T>(x: T) -> T {
+    x
+}
+
+fn main() {
+    let n = identity::<Int>(5)
+    let words = [1, 2].map::<String>(|x| x.to_string())
+    let _ = n
+    let _ = words
+}

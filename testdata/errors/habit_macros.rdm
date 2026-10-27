@@ -1,0 +1,26 @@
+fn describe(n: Int) -> String {
+    format!("n = {} and {n}", n + 1)
+}
+
+fn check(x: Int) -> Int {
+    if x < 0 {
+        panic!("negative: {}", x)
+    }
+    if x > 100 {
+        todo!("big numbers")
+    }
+    if x == 50 {
+        unreachable!()
+    }
+    x
+}
+
+fn main(sys: Sys) {
+    println!("{} is {:?}", 1, describe(1))
+    print!("no newline")
+    eprintln!("to stderr {{braces}} {}", check(2))
+    println!()
+    assert!(1 < 2)
+    let s = format!("{:.2}", 1.5)
+    sys.out.println(s)
+}

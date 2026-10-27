@@ -1,0 +1,30 @@
+struct Point {
+    x: Int,
+}
+
+impl Point {
+    fn get(&self) -> Int {
+        self.x
+    }
+
+    fn moved(&mut self) -> Point {
+        Point { x: self.x + 1 }
+    }
+}
+
+fn length(s: &str) -> Int {
+    s.len()
+}
+
+fn first(xs: &List<Int>) -> Int {
+    xs[0]
+}
+
+fn main() {
+    let p = Point { x: 1 }
+    let q = &p
+    let n = *q
+    let total = [1, 2].map(|&x| x + 1)
+    let _ = length("abc") + first(&[1]) + n.get()
+    let _ = total
+}

@@ -1,0 +1,13 @@
+fn evens(xs: Vec<Int>) -> Vec<Int> {
+    let mut out: Vec<Int> = Vec::new()
+    for x in xs {
+        if x % 2 == 0 {
+            out = out.push(x)
+        }
+    }
+    out
+}
+
+fn main() {
+    let _ = evens([1, 2, 3])
+}

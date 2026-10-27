@@ -1,0 +1,9 @@
+enum Expr {
+    Num(Int),
+    Neg(Box<Expr>),
+}
+
+fn main() {
+    let e = Expr::Neg(Box::new(Expr::Num(1)))
+    let _ = e
+}

@@ -1,0 +1,17 @@
+pub struct Point {
+    pub x: Int,
+}
+
+impl Point {
+    pub fn get(self) -> Int {
+        self.x
+    }
+}
+
+pub(crate) fn origin() -> Point {
+    Point { x: 0 }
+}
+
+fn main() {
+    let _ = origin().get()
+}

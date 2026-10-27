@@ -1,0 +1,7 @@
+fn main() {
+    let mut n = 0
+    n++
+    n--
+    n++ // again
+    let _ = n
+}

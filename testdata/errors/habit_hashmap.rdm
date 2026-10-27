@@ -1,0 +1,11 @@
+fn count(words: List<String>) -> HashMap<String, Int> {
+    let mut counts: HashMap<String, Int> = HashMap::new()
+    for w in words {
+        counts = counts.insert(w, counts.get(w).unwrap_or(0) + 1)
+    }
+    counts
+}
+
+fn main() {
+    let _ = count(["a"])
+}

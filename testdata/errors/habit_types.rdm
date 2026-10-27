@@ -1,0 +1,19 @@
+struct Point {
+    x: i32,
+    y: f64,
+    label: string,
+}
+
+fn size(p: Point, n: usize) -> u8 {
+    let ok: bool = true
+    let c: char = "c"
+    let _ = c
+    let _ = ok
+    let _ = p
+    let _ = n
+    3
+}
+
+fn main() {
+    let _ = size(Point { x: 1, y: 2.0, label: "a" }, 1)
+}

@@ -56,3 +56,52 @@ func TestReferenceSize(t *testing.T) {
 		t.Errorf("docs/REFERENCE.md is %d bytes; keep it under 24 KB", fi.Size())
 	}
 }
+
+// habits are the codes of the Rust and Go habits (DESIGN §7.2) and whether
+// each is mechanical, so that its diagnostics can carry a fix.
+var habits = []struct {
+	code       string
+	mechanical bool
+}{
+	{"R0108", true}, {"R0109", true}, {"R0110", true}, {"R0111", true}, {"R0112", true},
+	{"R0113", true}, {"R0114", true}, {"R0115", true}, {"R0116", true}, {"R0117", true},
+	{"R0118", true}, {"R0119", true}, {"R0120", false}, {"R0121", true}, {"R0122", true},
+	{"R0123", true}, {"R0124", true},
+}
+
+// TestHabits is the M2 check of DESIGN §10.1: each habit has an error test
+// and, where mechanical, a fix that removes it without adding an error.
+func TestHabits(t *testing.T) {
+	seen, fixed := map[string]bool{}, map[string]bool{}
+	for _, path := range errorCases(t) {
+		src, _ := os.ReadFile(path)
+		before := checkFile(path, src).Diags
+		for _, d := range before {
+			seen[d.Code] = true
+			if len(d.Fixes) == 0 {
+				continue
+			}
+			after := applyFix(t, path, src, d)
+			n0, e0 := countCode(before, d.Code)
+			n1, e1 := countCode(after, d.Code)
+			if n1 < n0 && e1 <= e0 {
+				fixed[d.Code] = true
+			}
+		}
+	}
+	listed := map[string]bool{}
+	for _, h := range habits {
+		listed[h.code] = true
+		if !seen[h.code] {
+			t.Errorf("habit %s has no error test", h.code)
+		}
+		if h.mechanical && !fixed[h.code] {
+			t.Errorf("habit %s has no fix test: no fix in testdata/errors removes it", h.code)
+		}
+	}
+	for code := range diag.Codes {
+		if code >= "R0108" && code < "R0200" && !listed[code] {
+			t.Errorf("%s is in the habit range but not in the habits list", code)
+		}
+	}
+}

@@ -28,7 +28,9 @@ func Parse(fs *FileSet, src *Source) (*File, []diag.Diagnostic) {
 	// the lexical one there.
 	bad := map[int]bool{}
 	for _, d := range lexDiags {
-		bad[d.Line] = true
+		if !habitCodes[d.Code] {
+			bad[d.Line] = true
+		}
 	}
 	diags := lexDiags
 	for _, d := range p.diags {
@@ -48,6 +50,8 @@ type parser struct {
 	depth    int // unclosed `{` consumed so far
 	loops    int // enclosing loops in the current function or closure
 	noStruct bool
+	params   []*Param // the parameters of the function being parsed
+	quiet    int      // >0 while skipping code that is reported as a whole
 	diags    []diag.Diagnostic
 }
 
@@ -75,6 +79,9 @@ func (p *parser) peek() Token {
 
 // report records an error and goes on parsing.
 func (p *parser) report(code string, sp Span, format string, args ...any) *diag.Diagnostic {
+	if p.quiet > 0 {
+		return &diag.Diagnostic{}
+	}
 	p.diags = append(p.diags, p.fs.Diag(code, sp, format, args...))
 	return &p.diags[len(p.diags)-1]
 }
@@ -139,7 +146,8 @@ func (p *parser) declRecover() (d Decl) {
 func (p *parser) sync() {
 	p.next()
 	for p.tok.Kind != EOF {
-		if isDeclStart(p.tok.Kind) && p.tok.NL {
+		start := isDeclStart(p.tok.Kind) || p.tok.Kind == IDENT && (p.tok.Text == "pub" || p.tok.Text == "func")
+		if start && p.tok.NL {
 			if _, col := p.src.LineCol(p.tok.Pos); p.depth <= 0 || col == 1 {
 				p.depth = 0
 				p.loops = 0
@@ -152,6 +160,12 @@ func (p *parser) sync() {
 }
 
 func (p *parser) decl() Decl {
+	if p.isPub() {
+		p.pub()
+	}
+	if p.tok.Kind == IDENT && p.tok.Text == "func" && p.peek().Kind == IDENT {
+		p.goFunc()
+	}
 	var d Decl
 	switch p.tok.Kind {
 	case FN:
@@ -210,6 +224,15 @@ func (p *parser) funcDecl(inImpl bool) *FuncDecl {
 	p.expect(LPAREN, "`(`")
 	var params []*Param
 	for p.tok.Kind != RPAREN {
+		if p.tok.Kind == AMP && (p.peek().Kind == SELF || p.peek().Kind == MUT && p.peekAt(2).Kind == SELF) {
+			amp := p.tok
+			p.next()
+			if p.tok.Kind == MUT {
+				p.next()
+			}
+			d := p.report("R0111", amp.Span(), "a method takes `self` by value: Riddim has no references, and a method that changes a value returns the new one")
+			d.Fixes = append(d.Fixes, fix("take self by value", p.fs.Edit(Span{amp.Pos, p.tok.Pos}, "")))
+		}
 		switch {
 		case p.tok.Kind == SELF:
 			t := p.tok
@@ -250,10 +273,10 @@ func (p *parser) funcDecl(inImpl bool) *FuncDecl {
 	if p.tok.Kind != LBRACE {
 		p.unexpected("`{` to start the function body")
 	}
-	saved := p.loops
-	p.loops = 0
+	saved, savedParams := p.loops, p.params
+	p.loops, p.params = 0, params
 	body := p.block()
-	p.loops = saved
+	p.loops, p.params = saved, savedParams
 	return &FuncDecl{Doc: doc, Fn: fn, Name: name, TypeParams: tps, Params: params, Result: result, Body: body}
 }
 
@@ -274,6 +297,9 @@ func (p *parser) structDecl() *StructDecl {
 		p.skipTerms()
 		if p.tok.Kind == RBRACE {
 			break
+		}
+		if p.isPub() {
+			p.pub()
 		}
 		fdoc := p.tok.Doc
 		fname := p.ident("a field name or `}`")
@@ -370,6 +396,12 @@ func (p *parser) implDecl() *ImplDecl {
 		if p.tok.Kind == RBRACE {
 			break
 		}
+		if p.isPub() {
+			p.pub()
+		}
+		if p.tok.Kind == IDENT && p.tok.Text == "func" && p.peek().Kind == IDENT {
+			p.goFunc()
+		}
 		if p.tok.Kind != FN {
 			p.unexpected("`fn` or `}` in the impl block")
 		}
@@ -402,7 +434,16 @@ var laterTypes = map[string]bool{"Env": true, "Fs": true, "Clock": true}
 
 func (p *parser) typ() TypeExpr {
 	switch p.tok.Kind {
+	case AMP:
+		return p.refType()
+	case STAR:
+		return p.ptrType()
+	case LBRACK:
+		return p.sliceType()
 	case IDENT, SELFTYPE:
+		if p.tok.Text == "map" && p.peek().Kind == LBRACK {
+			return p.goMapType()
+		}
 		name := &Ident{NamePos: p.tok.Pos, Name: p.tok.Text}
 		if laterTypes[name.Name] {
 			p.report("R0106", name.Span(), "`%s` is not supported in this version", name.Name)
@@ -519,6 +560,10 @@ func (p *parser) stmt() Stmt {
 		return p.letStmt()
 	case FN, STRUCT, ENUM, IMPL, CONST, USE:
 		p.fail("R0105", p.tok.Span(), "`%s` declarations go at the top level of a file", p.tok.Kind)
+	case IDENT:
+		if p.tok.Text == "var" && p.peek().Kind == IDENT {
+			return p.varStmt()
+		}
 	}
 	x := p.expr()
 	switch p.tok.Kind {
@@ -526,6 +571,14 @@ func (p *parser) stmt() Stmt {
 		op := p.tok
 		p.next()
 		return &AssignStmt{Target: x, OpPos: op.Pos, Op: op.Kind, Value: p.expr()}
+	case COLONEQ:
+		return p.shortVarDecl(x)
+	case INCR, DECR:
+		return p.incrStmt(x)
+	case COMMA:
+		if id, ok := x.(*Ident); ok {
+			p.multiDecl(id)
+		}
 	}
 	return &ExprStmt{X: x}
 }
@@ -641,10 +694,15 @@ func (p *parser) castExpr() Expr {
 }
 
 func (p *parser) unaryExpr() Expr {
-	if p.tok.Kind == MINUS || p.tok.Kind == NOT {
+	switch p.tok.Kind {
+	case MINUS, NOT:
 		op := p.tok
 		p.next()
 		return &UnaryExpr{OpPos: op.Pos, Op: op.Kind, X: p.unaryExpr()}
+	case AMP, ANDAND:
+		return p.reference()
+	case STAR:
+		return p.deref()
 	}
 	return p.postfix(p.primary())
 }
@@ -670,12 +728,6 @@ func (p *parser) args() ([]Expr, Pos) {
 	return args, rp
 }
 
-func (p *parser) noTurbofish() {
-	if p.tok.Kind == COLON2 && p.peek().Kind == LT {
-		p.fail("R0105", p.tok.Span(), "calls take no type arguments: Riddim infers them; annotate the binding instead")
-	}
-}
-
 func (p *parser) postfix(x Expr) Expr {
 	for {
 		switch p.tok.Kind {
@@ -691,7 +743,7 @@ func (p *parser) postfix(x Expr) Expr {
 				continue
 			}
 			name := p.ident("a field or method name")
-			p.noTurbofish()
+			p.turbofish()
 			if p.tok.Kind == LPAREN {
 				args, rp := p.args()
 				x = &MethodCallExpr{Recv: x, Name: name, Args: args, Rparen: rp}
@@ -750,10 +802,17 @@ func (p *parser) primary() Expr {
 	case IDENT, SELFTYPE:
 		p.next()
 		id := &Ident{NamePos: t.Pos, Name: t.Text}
-		p.noTurbofish()
+		if p.tok.Kind == NOT && p.tok.Pos == t.End && t.Kind == IDENT {
+			switch p.peek().Kind {
+			case LPAREN, LBRACK, LBRACE:
+				return p.macro(id)
+			}
+		}
+		p.turbofish()
 		if p.tok.Kind == COLON2 {
 			p.next()
 			name := p.ident("a variant or function name after `::`")
+			p.turbofish()
 			if p.tok.Kind == COLON2 {
 				p.fail("R0105", p.tok.Span(), "a path has two parts, as in `Shape::Circle`")
 			}
@@ -1005,7 +1064,24 @@ func (p *parser) matchExpr() Expr {
 
 func (p *parser) forExpr() Expr {
 	pos := p.expect(FOR, "`for`").Pos
+	kw := Span{pos, pos + 3}
+	switch {
+	case p.tok.Kind == LBRACE:
+		d := p.report("R0105", kw, "a `for` loop runs over a list, a map or a range: a loop without an end is `loop { }`")
+		d.Fixes = append(d.Fixes, fix("write `loop`", p.fs.Edit(kw, "loop")))
+		return &LoopExpr{Loop: pos, Body: p.loopBody()}
+	case p.tok.Kind == IDENT && p.peek().Kind == COLONEQ:
+		return p.goFor(pos)
+	}
 	f := &ForExpr{For: pos, Pat: p.pattern()}
+	if _, ok := f.Pat.(*BindPat); ok && p.tok.Kind != IN {
+		switch k := p.tok.Kind; {
+		case k == LBRACE || k == DOT || k == LPAREN || k == ANDAND || k == OROR || isCmp(k):
+			d := p.report("R0105", kw, "a `for` loop runs over a list, a map or a range: a loop with a condition is `while cond { }`")
+			d.Fixes = append(d.Fixes, fix("write `while`", p.fs.Edit(kw, "while")))
+			panic(bailout{})
+		}
+	}
 	p.expect(IN, "`in`")
 	f.Iter = p.exprNoStruct()
 	if p.tok.Kind == DOT2 || p.tok.Kind == DOT2EQ {
@@ -1102,6 +1178,15 @@ func (p *parser) patternNoOr() Pattern {
 		return &BindPat{Name: id}
 	case INT, STRING, TRUE, FALSE:
 		return &LitPat{Lit: p.primary()}
+	case AMP:
+		p.next()
+		if p.tok.Kind == MUT {
+			p.next()
+		}
+		inner := p.patternNoOr()
+		d := p.report("R0111", t.Span(), "Riddim has no references: a pattern matches the value itself")
+		d.Fixes = append(d.Fixes, fix("match the value", p.fs.Edit(Span{t.Pos, inner.Span().Start}, "")))
+		return inner
 	case FLOAT:
 		p.fail("R0105", t.Span(), "a Float literal cannot be a pattern; bind it and use a guard: `x if x == %s`", t.Text)
 	case STRHEAD:

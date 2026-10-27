@@ -1,0 +1,15 @@
+fn doubled(xs: List<Int>) -> List<Int> {
+    xs.iter().map(|x| x * 2).collect()
+}
+
+fn total(xs: List<Int>) -> Int {
+    let mut t = 0
+    for x in xs.into_iter() {
+        t += x
+    }
+    t
+}
+
+fn main() {
+    let _ = doubled([1]).len() + total([2])
+}

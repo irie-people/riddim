@@ -1,0 +1,14 @@
+#![allow(dead_code)]
+
+#[derive(Debug, Clone, PartialEq)]
+struct Point {
+    x: Int,
+}
+
+#[inline] fn get(p: Point) -> Int {
+    p.x
+}
+
+fn main() {
+    let _ = get(Point { x: 1 })
+}

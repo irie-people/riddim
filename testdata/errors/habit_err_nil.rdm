@@ -1,0 +1,11 @@
+fn parse(text: String) -> Result<Int, Error> {
+    let n = text.parse_int()
+    if err != nil {
+        return Err(error("bad"))
+    }
+    n
+}
+
+fn main() {
+    let _ = parse("1")
+}

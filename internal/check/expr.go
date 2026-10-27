@@ -244,6 +244,9 @@ func (c *checker) ident(e *syntax.Ident, want Type) Type {
 		c.errorf("R0201", e.Span(), "`Self` is a type, not a value; write `Self { ... }` or `Self::name`")
 		return invalid
 	}
+	if e.Name == "nil" {
+		return c.nilValue(e, want)
+	}
 	d := c.unknown(e, "name", c.valueNames())
 	if en := c.enumWithVariant(e.Name); en != "" {
 		d.Notes = append(d.Notes, fmt.Sprintf("variants are written with their enum: `%s::%s`", en, e.Name))
@@ -551,6 +554,9 @@ func (c *checker) call(e *syntax.CallExpr, want Type) Type {
 			return invalid
 		}
 	case *syntax.PathExpr:
+		if t, ok := c.habitPath(e, fun, want); ok {
+			return t
+		}
 		if fun.Type.Name == "Map" {
 			m := c.mapNew(fun, want)
 			if m == nil {
@@ -607,6 +613,11 @@ func (c *checker) methodCall(e *syntax.MethodCallExpr, want Type) Type {
 		return fail()
 	case *Named:
 		m := r.Decl.Method(name)
+		if m == nil && r.Decl.Field(name) == nil {
+			if t, ok := c.habitMethod(e, rt); ok {
+				return t
+			}
+		}
 		if m == nil || !m.HasSelf {
 			var d *diag.Diagnostic
 			switch {
@@ -643,12 +654,18 @@ func (c *checker) methodCall(e *syntax.MethodCallExpr, want Type) Type {
 		sig := subst(m.Sig(), sub).(*Func)
 		return c.callWith("`"+name+"`", e.Span(), e.Args, sig.Params, sig.Result, want)
 	case *TypeParam:
+		if t, ok := c.habitMethod(e, rt); ok {
+			return t
+		}
 		c.errorf("R0304", e.Name.Span(), "a value of type parameter %s has no methods in this version", r.Name)
 		return fail()
 	}
 	table, recvArgs, typeName := methodsOf(rt)
 	b := table[name]
 	if b == nil {
+		if t, ok := c.habitMethod(e, rt); ok {
+			return t
+		}
 		var cands []string
 		for n := range table {
 			cands = append(cands, n)
@@ -954,6 +971,9 @@ func (c *checker) binary(e *syntax.BinaryExpr, want Type) Type {
 		c.foldBinary(e, Bool)
 		return Bool
 	case syntax.EQ, syntax.NE, syntax.LT, syntax.LE, syntax.GT, syntax.GE:
+		if (e.Op == syntax.EQ || e.Op == syntax.NE) && c.nilCompare(e) {
+			return Bool
+		}
 		lt, rt := c.operands(e, nil)
 		if isInvalid(lt) || isInvalid(rt) {
 			return Bool

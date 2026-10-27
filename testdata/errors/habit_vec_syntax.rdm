@@ -1,0 +1,10 @@
+fn sum(xs: []Int) -> Int {
+    xs.fold(0, |a, b| a + b)
+}
+
+fn main() {
+    let xs = vec![1, 2, 3]
+    let zeros = vec![0; 3]
+    let grid: [Int; 3] = [1, 2, 3]
+    let _ = sum(xs) + zeros.len() + grid.len()
+}

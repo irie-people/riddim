@@ -1,0 +1,14 @@
+struct Point {
+    x: Int,
+}
+
+fn main() {
+    let p = Point { x: 1 }
+    let q = p.clone()
+    let xs = [1, 2]
+    let ys = xs.to_vec()
+    let names = ["a"].cloned()
+    let _ = q
+    let _ = ys
+    let _ = names
+}

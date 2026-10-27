@@ -543,6 +543,9 @@ func (c *checker) resolveNamed(t *syntax.NamedType) Type {
 			c.errorf("R0201", t.Name.Span(), "`%s` is not a type", name)
 			return invalid
 		}
+		if ht := c.habitType(t, args); ht != nil {
+			return ht
+		}
 		c.unknown(t.Name, "type", c.typeNames())
 		return invalid
 	}

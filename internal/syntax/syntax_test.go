@@ -88,7 +88,9 @@ func TestNewlineRules(t *testing.T) {
 
 func TestLexErrors(t *testing.T) {
 	tests := []struct{ src, code string }{
-		{"let x = &y", "R0101"},
+		{"let x = a & y", "R0101"},
+		{"let c = 'a' 'static", "R0101 R0112"},
+		{"#[derive(Debug)]", "R0122"},
 		{"let c = 'a'", "R0101"},
 		{"let s = \"abc\n", "R0102"},
 		{`"\q"`, "R0103"},
@@ -102,7 +104,7 @@ func TestLexErrors(t *testing.T) {
 	}
 	for _, tt := range tests {
 		_, codes := tokens(t, tt.src)
-		if len(codes) != 1 || codes[0] != tt.code {
+		if strings.Join(codes, " ") != tt.code {
 			t.Errorf("Lex(%q) codes = %v, want [%s]", tt.src, codes, tt.code)
 		}
 	}
@@ -209,7 +211,20 @@ func TestParseErrors(t *testing.T) {
 		{"fn f() { a < b < c }", "R0105"},
 		{"fn f(x) { }", "R0105"},
 		{"struct P(Int)", "R0105"},
-		{"fn f() { foo::<Int>() }", "R0105"},
+		{"fn f() { foo::<Int>() }", "R0116"},
+		// Rust and Go habits: each has its own code, and parsing goes on
+		{"fn f() { var x = 1; y := 2; z++ }", "R0108 R0108 R0123"},
+		{"fn f() { a, b := g() }\nfn h() { }", "R0108"},
+		{"fn f() { for i := 0; i < 3; i++ { } }", "R0108"},
+		{"fn f(s: &str, t: &mut T, u: *T) { let r = &s; let v = *r; g(&mut x) }", "R0111 R0111 R0111 R0111 R0111 R0111"},
+		{"impl P { fn m(&self) { }; fn n(&mut self) { } }", "R0111 R0111"},
+		{"fn f<'a>(x: &'a str) { 'outer: loop { break 'outer } }", "R0112 R0112 R0112 R0112 R0111"},
+		{"fn f() { let v = vec![1, 2]; println!(\"{}\", v); x.collect::<Vec<_>>() }", "R0113 R0115 R0116"},
+		{"fn f(xs: []int, m: map[string]int) { }", "R0113 R0114"},
+		{"pub fn f() { }\npub(crate) struct S { pub x: Int }", "R0121 R0121 R0121"},
+		{"#[derive(Debug)]\nstruct S { }", "R0122"},
+		{"func f() { }", "R0124"},
+		{"fn f() { for { } for x < 3 { } }", "R0105 R0105"},
 		{"fn f() { match x { A => y = 1 } }", "R0105"},
 		// one error per declaration: recovery finds the next one
 		{"fn f() { ) }\nfn g() { ] }\nfn h() { }", "R0105 R0105"},

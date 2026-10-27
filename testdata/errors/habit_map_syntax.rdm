@@ -1,0 +1,7 @@
+fn lookup(m: map[String]Int, k: String) -> Int {
+    m.get(k).unwrap_or(0)
+}
+
+fn main() {
+    let _ = lookup
+}

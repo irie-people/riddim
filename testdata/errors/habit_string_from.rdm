@@ -1,0 +1,9 @@
+fn greet(name: String) -> String {
+    let mut out = String::new()
+    out = out + String::from("hello, ")
+    out + name.as_str() + "!".to_owned()
+}
+
+fn main() {
+    let _ = greet("alice")
+}

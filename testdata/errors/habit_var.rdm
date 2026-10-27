@@ -1,0 +1,19 @@
+fn count(xs: List<Int>) -> Int {
+    var total = 0
+    for x in xs {
+        total += x
+    }
+    n := total * 2
+    var limit Int = 10
+    for i := 0; i < 3; i++ {
+        total += i
+    }
+    for j := 1; j <= limit; j++ {
+        total += j
+    }
+    n + limit
+}
+
+fn main() {
+    let _ = count([1, 2])
+}
