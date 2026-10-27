@@ -111,16 +111,16 @@ func (f *fn) test(p syntax.Pattern, x string, choice map[*syntax.OrPat]int, out 
 	case *syntax.VariantPat:
 		switch info.Kind {
 		case check.PSome:
-			out.conds = append(out.conds, x+".some")
-			f.test(p.Args[0], x+".value", choice, out)
+			out.conds = append(out.conds, x+".IsSome")
+			f.test(p.Args[0], x+".Value", choice, out)
 		case check.PNone:
-			out.conds = append(out.conds, "!"+x+".some")
+			out.conds = append(out.conds, "!"+x+".IsSome")
 		case check.POk:
-			out.conds = append(out.conds, x+".ok")
-			f.test(p.Args[0], x+".value", choice, out)
+			out.conds = append(out.conds, x+".IsOk")
+			f.test(p.Args[0], x+".Value", choice, out)
 		case check.PErr:
-			out.conds = append(out.conds, "!"+x+".ok")
-			f.test(p.Args[0], x+".err", choice, out)
+			out.conds = append(out.conds, "!"+x+".IsOk")
+			f.test(p.Args[0], x+".Err", choice, out)
 		case check.PVariant:
 			v := info.Variant
 			if v.Enum.Fieldless() {
@@ -128,7 +128,7 @@ func (f *fn) test(p syntax.Pattern, x string, choice map[*syntax.OrPat]int, out 
 				return
 			}
 			vt := f.variantType(v, info.TypeArgs)
-			out.conds = append(out.conds, "isVariant["+vt+"]("+x+")")
+			out.conds = append(out.conds, f.rt("IsVariant")+"["+vt+"]("+x+")")
 			for i, a := range p.Args {
 				f.test(a, x+".("+vt+")."+fieldName(v.Fields[i]), choice, out)
 			}

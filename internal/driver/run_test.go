@@ -125,7 +125,7 @@ func TestRun(t *testing.T) {
 		files, err := emit.Program(u.Prog, func(s *syntax.Source) string {
 			rel, _ := filepath.Rel(out, s.Name)
 			return filepath.ToSlash(rel)
-		})
+		}, "runtests/"+emit.RuntimeDir)
 		if err != nil {
 			t.Errorf("%s: %v", p.name, err)
 			continue
@@ -139,6 +139,13 @@ func TestRun(t *testing.T) {
 	if len(built) == 0 {
 		t.Fatal("nothing to build")
 	}
+	// Every program imports one runtime package, which Go compiles once.
+	rt, err := emit.Runtime()
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.MkdirAll(filepath.Join(gen, emit.RuntimeDir), 0o755)
+	os.WriteFile(filepath.Join(gen, emit.RuntimeDir, "rt.go"), rt, 0o644)
 	os.WriteFile(filepath.Join(gen, "go.mod"), []byte("module runtests\n\ngo 1.27\n"), 0o644)
 	goCmd := func(args ...string) {
 		cmd := exec.Command("go", args...)

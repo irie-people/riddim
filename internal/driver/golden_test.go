@@ -212,7 +212,7 @@ func TestEmit(t *testing.T) {
 			if ds := u.Check(); diag.HasErrors(ds) {
 				t.Fatalf("errors: %s", summary(ds))
 			}
-			files, err := emit.Program(u.Prog, func(s *syntax.Source) string { return s.Name })
+			files, err := emit.Program(u.Prog, func(s *syntax.Source) string { return s.Name }, RuntimePath)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -245,7 +245,7 @@ func TestDocComments(t *testing.T) {
 	if ds := u.Check(); diag.HasErrors(ds) {
 		t.Fatalf("errors: %s", summary(ds))
 	}
-	files, err := emit.Program(u.Prog, func(s *syntax.Source) string { return s.Name })
+	files, err := emit.Program(u.Prog, func(s *syntax.Source) string { return s.Name }, RuntimePath)
 	if err != nil {
 		t.Fatal(err)
 	}

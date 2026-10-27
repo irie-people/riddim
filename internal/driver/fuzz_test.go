@@ -26,7 +26,7 @@ func FuzzCheck(f *testing.F) {
 	f.Fuzz(func(t *testing.T, src []byte) {
 		u := FromSources(".", map[string][]byte{"main.rdm": src})
 		if ds := u.Check(); !diag.HasErrors(ds) {
-			if _, err := emit.Program(u.Prog, func(s *syntax.Source) string { return s.Name }); err != nil {
+			if _, err := emit.Program(u.Prog, func(s *syntax.Source) string { return s.Name }, RuntimePath); err != nil {
 				t.Fatalf("emit: %v", err)
 			}
 		}

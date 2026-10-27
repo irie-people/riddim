@@ -118,7 +118,7 @@ func TestBuildEmitRun(t *testing.T) {
 	if _, errs, code := riddim(t, "emit", dir, "-o", gen); code != 0 {
 		t.Fatalf("emit: exit %d\n%s", code, errs)
 	}
-	for _, f := range []string{"main.rdm.go", "riddim_rt.go", "riddim_main.go", "go.mod"} {
+	for _, f := range []string{"main.rdm.go", "rt/rt.go", "riddim_main.go", "go.mod"} {
 		if _, err := os.Stat(filepath.Join(gen, f)); err != nil {
 			t.Errorf("emit did not write %s", f)
 		}

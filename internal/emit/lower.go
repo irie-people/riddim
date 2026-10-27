@@ -401,7 +401,7 @@ func (f *fn) fieldSel(x *syntax.FieldExpr) string {
 	case fu.Field != nil:
 		return fieldName(fu.Field)
 	case fu.Sys != "":
-		return fu.Sys
+		return strings.ToUpper(fu.Sys[:1]) + fu.Sys[1:]
 	}
 	return fmt.Sprintf("f%d", fu.Tuple)
 }
@@ -592,7 +592,7 @@ func (f *fn) forMap(x *syntax.ForExpr, it value) {
 		if l := f.info.Defs[p.Name]; l.Used {
 			idx, key = f.temp("i"), f.temp("k")
 			bind = append(bind, func() {
-				f.printf("%s := %s{%s, %s.vals[%s]}\n", f.bind(l), f.goType(l.Type), key, m, idx)
+				f.printf("%s := %s{%s, %s.Vals[%s]}\n", f.bind(l), f.goType(l.Type), key, m, idx)
 			})
 		}
 	case *syntax.TuplePat:
@@ -609,18 +609,18 @@ func (f *fn) forMap(x *syntax.ForExpr, it value) {
 		}
 		if vp := p.Elems[1]; bindsNames(vp) {
 			idx = f.temp("i")
-			bind = append(bind, func() { f.destructure(vp, m+".vals["+idx+"]") })
+			bind = append(bind, func() { f.destructure(vp, m+".Vals["+idx+"]") })
 		}
 	}
 	switch {
 	case idx == "_" && key == "_":
-		f.printf("for range %s.keys {\n", m)
+		f.printf("for range %s.Keys {\n", m)
 	case idx == "_":
-		f.printf("for _, %s := range %s.keys {\n", key, m)
+		f.printf("for _, %s := range %s.Keys {\n", key, m)
 	case key == "_":
-		f.printf("for %s := range %s.keys {\n", idx, m)
+		f.printf("for %s := range %s.Keys {\n", idx, m)
 	default:
-		f.printf("for %s, %s := range %s.keys {\n", idx, key, m)
+		f.printf("for %s, %s := range %s.Keys {\n", idx, key, m)
 	}
 	for _, b := range bind {
 		b()
@@ -825,13 +825,13 @@ func (f *fn) ident(x *syntax.Ident) value {
 	case check.UseFunc:
 		return f.funcValue(goName(use.Func.Name), use.Func, use.TypeArgs, f.typeOf(x))
 	case check.UseNone:
-		return value{s: "None[" + f.goType(use.TypeArgs[0]) + "]()", stable: true}
+		return value{s: f.rt("None") + "[" + f.goType(use.TypeArgs[0]) + "]()", stable: true}
 	case check.UseSome:
-		return value{s: "Some[" + f.goType(use.TypeArgs[0]) + "]", stable: true}
+		return value{s: f.rt("Some") + "[" + f.goType(use.TypeArgs[0]) + "]", stable: true}
 	case check.UseOk:
-		return value{s: "Ok" + typeArgs(f.typeList(use.TypeArgs)), stable: true}
+		return value{s: f.rt("Ok") + typeArgs(f.typeList(use.TypeArgs)), stable: true}
 	case check.UseErr:
-		return value{s: "Err" + typeArgs(f.typeList(use.TypeArgs)), stable: true}
+		return value{s: f.rt("Err") + typeArgs(f.typeList(use.TypeArgs)), stable: true}
 	case check.UseError:
 		f.imports["errors"] = true
 		return value{s: "errors.New", stable: true}
@@ -882,7 +882,7 @@ func (f *fn) path(x *syntax.PathExpr) value {
 	case check.UseAssoc:
 		return f.funcValue(use.Func.Recv.Name+"_"+use.Func.Name, use.Func, use.TypeArgs, f.typeOf(x))
 	case check.UseMapNew:
-		t := "Map" + typeArgs(f.typeList(use.TypeArgs))
+		t := f.rt("Map") + typeArgs(f.typeList(use.TypeArgs))
 		return value{s: "func() " + t + " {\nreturn " + t + "{}\n}", stable: true}
 	}
 	return value{s: "nil"}
@@ -929,13 +929,13 @@ func (f *fn) call(x *syntax.CallExpr) value {
 			}
 			return value{s: f.variantType(v, use.TypeArgs) + "{" + strings.Join(inits, ", ") + "}", concrete: true}
 		case check.UseMapNew:
-			return value{s: "Map" + typeArgs(f.typeList(use.TypeArgs)) + "{}", stable: true}
+			return value{s: f.rt("Map") + typeArgs(f.typeList(use.TypeArgs)) + "{}", stable: true}
 		case check.UseSome:
-			return value{s: "Some[" + f.goType(use.TypeArgs[0]) + "](" + args + ")"}
+			return value{s: f.rt("Some") + "[" + f.goType(use.TypeArgs[0]) + "](" + args + ")"}
 		case check.UseOk:
-			return value{s: "Ok" + typeArgs(f.typeList(use.TypeArgs)) + "(" + args + ")"}
+			return value{s: f.rt("Ok") + typeArgs(f.typeList(use.TypeArgs)) + "(" + args + ")"}
 		case check.UseErr:
-			return value{s: "Err" + typeArgs(f.typeList(use.TypeArgs)) + "(" + args + ")"}
+			return value{s: f.rt("Err") + typeArgs(f.typeList(use.TypeArgs)) + "(" + args + ")"}
 		case check.UseError:
 			f.imports["errors"] = true
 			return value{s: "errors.New(" + args + ")"}
@@ -990,8 +990,13 @@ func (f *fn) methodCall(x *syntax.MethodCallExpr) value {
 func (f *fn) builtin(mu *check.MethodUse, recv value, args []value) value {
 	r := operand(recv)
 	ta := typeArgs(f.typeList(mu.TypeArgs))
+	// call calls a runtime function; the helpers that use generated tuple
+	// types are in the program's own package.
 	call := func(name string) value {
-		return value{s: name + ta + "(" + joinVals(append([]value{recv}, args...)) + ")"}
+		if name == "listEnumerate" || name == "mapEntries" {
+			return value{s: name + ta + "(" + joinVals(append([]value{recv}, args...)) + ")"}
+		}
+		return value{s: f.rt(strings.ToUpper(name[:1])+name[1:]) + ta + "(" + joinVals(append([]value{recv}, args...)) + ")"}
 	}
 	switch mu.Builtin {
 	case "list.len":
@@ -1044,9 +1049,9 @@ func (f *fn) builtin(mu *check.MethodUse, recv value, args []value) value {
 	case "list.join":
 		return f.pkgCall("strings", "Join", recv, args)
 	case "map.len":
-		return value{s: "len(" + r + ".keys)"}
+		return value{s: "len(" + r + ".Keys)"}
 	case "map.is_empty":
-		return value{s: "len(" + r + ".keys) == 0", op: true}
+		return value{s: "len(" + r + ".Keys) == 0", op: true}
 	case "map.get":
 		return call("mapGet")
 	case "map.contains_key":
@@ -1056,16 +1061,16 @@ func (f *fn) builtin(mu *check.MethodUse, recv value, args []value) value {
 	case "map.remove":
 		return call("mapRemove")
 	case "map.keys":
-		return value{s: r + ".keys", stable: recv.stable}
+		return value{s: r + ".Keys", stable: recv.stable}
 	case "map.values":
-		return value{s: r + ".vals", stable: recv.stable}
+		return value{s: r + ".Vals", stable: recv.stable}
 	case "map.entries":
 		f.helper("mapEntries")
 		return call("mapEntries")
 	case "option.is_some":
-		return value{s: r + ".some"}
+		return value{s: r + ".IsSome"}
 	case "option.is_none":
-		return value{s: "!" + r + ".some", op: true}
+		return value{s: "!" + r + ".IsSome", op: true}
 	case "option.unwrap_or":
 		return call("optionUnwrapOr")
 	case "option.map":
@@ -1079,9 +1084,9 @@ func (f *fn) builtin(mu *check.MethodUse, recv value, args []value) value {
 	case "option.expect":
 		return call("optionExpect")
 	case "result.is_ok":
-		return value{s: r + ".ok"}
+		return value{s: r + ".IsOk"}
 	case "result.is_err":
-		return value{s: "!" + r + ".ok", op: true}
+		return value{s: "!" + r + ".IsOk", op: true}
 	case "result.unwrap_or":
 		return call("resultUnwrapOr")
 	case "result.map":
@@ -1119,9 +1124,9 @@ func (f *fn) builtin(mu *check.MethodUse, recv value, args []value) value {
 	case "string.to_string":
 		return recv
 	case "string.parse_int":
-		return value{s: "parseInt(" + recv.s + ")"}
+		return value{s: f.rt("ParseInt") + "(" + recv.s + ")"}
 	case "string.parse_float":
-		return value{s: "parseFloat(" + recv.s + ")"}
+		return value{s: f.rt("ParseFloat") + "(" + recv.s + ")"}
 	case "string.len":
 		return value{s: "len(" + recv.s + ")"}
 	case "string.is_empty":
@@ -1167,11 +1172,10 @@ func (f *fn) builtin(mu *check.MethodUse, recv value, args []value) value {
 	case "float.sqrt":
 		return f.pkgCall("math", "Sqrt", recv, args)
 	case "out.print", "out.println":
-		f.printf("%s.%s(%s)\n", r, strings.TrimPrefix(mu.Builtin, "out."), joinVals(args))
+		f.printf("%s.%s(%s)\n", r, capMethods[mu.Builtin], joinVals(args))
 		return value{s: "struct{}{}", stable: true}
 	case "env.get", "env.args", "fs.read", "fs.write", "fs.exists", "fs.list", "clock.now_ms":
-		_, method, _ := strings.Cut(mu.Builtin, ".")
-		return value{s: r + "." + method + "(" + joinVals(args) + ")"}
+		return value{s: r + "." + capMethods[mu.Builtin] + "(" + joinVals(args) + ")"}
 	}
 	return value{s: "nil"}
 }
@@ -1201,12 +1205,12 @@ func (f *fn) try(x *syntax.TryExpr) value {
 	outer := check.Deep(info.Outer)
 	if info.Option {
 		elem := outer.(*check.Option).Elem
-		f.printf("if !%s.some {\nreturn None[%s]()\n}\n", name, f.goType(elem))
+		f.printf("if !%s.IsSome {\nreturn %s[%s]()\n}\n", name, f.rt("None"), f.goType(elem))
 	} else {
 		res := outer.(*check.Result)
-		f.printf("if !%s.ok {\nreturn Err[%s, %s](%s.err)\n}\n", name, f.goType(res.Ok), f.goType(res.Err), name)
+		f.printf("if !%s.IsOk {\nreturn %s[%s, %s](%s.Err)\n}\n", name, f.rt("Err"), f.goType(res.Ok), f.goType(res.Err), name)
 	}
-	return value{s: name + ".value", stable: true}
+	return value{s: name + ".Value", stable: true}
 }
 
 func (f *fn) ret(x *syntax.ReturnExpr) {
@@ -1265,9 +1269,9 @@ func (f *fn) cast(x *syntax.AsExpr) value {
 	case to == check.Float:
 		conv = "float64"
 	case from == check.Float && to == check.Int:
-		conv = "floatToInt"
+		conv = f.rt("FloatToInt")
 	case from == check.Float:
-		conv = "floatToByte"
+		conv = f.rt("FloatToByte")
 	case to == check.Int:
 		conv = "int"
 	default:
@@ -1455,4 +1459,10 @@ func (f *fn) bindCopy(l *check.Local) string {
 			return cand
 		}
 	}
+}
+
+// capMethods are the Go names of the capabilities' methods in the runtime.
+var capMethods = map[string]string{
+	"out.print": "Print", "out.println": "Println", "env.get": "Get", "env.args": "Args",
+	"fs.read": "Read", "fs.write": "Write", "fs.exists": "Exists", "fs.list": "List", "clock.now_ms": "NowMs",
 }

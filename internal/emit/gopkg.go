@@ -23,21 +23,21 @@ func (f *fn) goCall(args []syntax.Expr, gu *check.GoUse) value {
 	f.imports[gu.Pkg.Path] = true
 	conv := make([]string, len(vals))
 	for i, v := range vals {
-		conv[i] = toGo(v.s, gu.Func.Params[i])
+		conv[i] = f.toGo(v.s, gu.Func.Params[i])
 	}
 	call := gu.Pkg.Name + "." + gu.Name + "(" + strings.Join(conv, ", ") + ")"
 	switch gf := gu.Func; gf.Result {
 	case check.GoErr:
-		return value{s: "goError(" + call + ")"}
+		return value{s: f.rt("GoError") + "(" + call + ")"}
 	case check.GoValueErr:
 		if !needsConv(gf.Value) {
-			return value{s: "goResult(" + call + ")"}
+			return value{s: f.rt("GoResult") + "(" + call + ")"}
 		}
 		v, err := f.temp("v"), f.temp("err")
 		f.printf("%s, %s := %s\n", v, err, call)
-		return value{s: "goResult(" + fromGo(v, gf.Value) + ", " + err + ")"}
+		return value{s: f.rt("GoResult") + "(" + f.fromGo(v, gf.Value) + ", " + err + ")"}
 	}
-	return value{s: fromGo(call, gu.Func.Value)}
+	return value{s: f.fromGo(call, gu.Func.Value)}
 }
 
 // goFuncValue lowers a Go function used as a value. When Riddim's function
@@ -58,19 +58,19 @@ func (f *fn) goFuncValue(gu *check.GoUse) value {
 	var params, args []string
 	for i, p := range gf.Params {
 		params = append(params, fmt.Sprintf("p%d %s", i, f.goType(ft.Params[i])))
-		args = append(args, toGo(fmt.Sprintf("p%d", i), p))
+		args = append(args, f.toGo(fmt.Sprintf("p%d", i), p))
 	}
 	call := name + "(" + strings.Join(args, ", ") + ")"
 	var body string
 	switch {
 	case gf.Result == check.GoErr:
-		body = "return goError(" + call + ")"
+		body = "return " + f.rt("GoError") + "(" + call + ")"
 	case gf.Result == check.GoValueErr && needsConv(gf.Value):
-		body = "v, err := " + call + "\nreturn goResult(" + fromGo("v", gf.Value) + ", err)"
+		body = "v, err := " + call + "\nreturn " + f.rt("GoResult") + "(" + f.fromGo("v", gf.Value) + ", err)"
 	case gf.Result == check.GoValueErr:
-		body = "return goResult(" + call + ")"
+		body = "return " + f.rt("GoResult") + "(" + call + ")"
 	default:
-		body = "return " + fromGo(call, gf.Value)
+		body = "return " + f.fromGo(call, gf.Value)
 	}
 	return value{s: fmt.Sprintf("func(%s) %s {\n%s\n}", strings.Join(params, ", "), f.goType(ft.Result), body), stable: true}
 }
@@ -103,7 +103,7 @@ func needsConv(t types.Type) bool {
 }
 
 // toGo converts the Riddim value s to Go type t.
-func toGo(s string, t types.Type) string {
+func (e *emitter) toGo(s string, t types.Type) string {
 	if isRune(t) {
 		return "rune(" + s + ")"
 	}
@@ -112,13 +112,13 @@ func toGo(s string, t types.Type) string {
 		return s
 	}
 	if !needsConv(sl.Elem()) {
-		return "listCopy(" + s + ")"
+		return e.rt("ListCopy") + "(" + s + ")"
 	}
-	return fmt.Sprintf("listMap(%s, func(x %s) %s {\nreturn %s\n})", s, riddimGo(sl.Elem()), goTypeName(sl.Elem()), toGo("x", sl.Elem()))
+	return fmt.Sprintf("%s(%s, func(x %s) %s {\nreturn %s\n})", e.rt("ListMap"), s, riddimGo(sl.Elem()), goTypeName(sl.Elem()), e.toGo("x", sl.Elem()))
 }
 
 // fromGo converts the Go value s of type t to Riddim.
-func fromGo(s string, t types.Type) string {
+func (e *emitter) fromGo(s string, t types.Type) string {
 	if isRune(t) {
 		return "int(" + s + ")"
 	}
@@ -127,9 +127,9 @@ func fromGo(s string, t types.Type) string {
 		return s
 	}
 	if !needsConv(sl.Elem()) {
-		return "listCopy(" + s + ")"
+		return e.rt("ListCopy") + "(" + s + ")"
 	}
-	return fmt.Sprintf("listMap(%s, func(x %s) %s {\nreturn %s\n})", s, goTypeName(sl.Elem()), riddimGo(sl.Elem()), fromGo("x", sl.Elem()))
+	return fmt.Sprintf("%s(%s, func(x %s) %s {\nreturn %s\n})", e.rt("ListMap"), s, goTypeName(sl.Elem()), riddimGo(sl.Elem()), e.fromGo("x", sl.Elem()))
 }
 
 // goTypeName writes a Go type as Go source.

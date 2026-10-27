@@ -4,6 +4,7 @@ package main
 
 import (
 	"errors"
+	"riddimprog/rt"
 	"strconv"
 )
 
@@ -20,42 +21,42 @@ func (self Point[T]) map_[U any](f func(T) U) Point[U] {
 }
 
 //line errors.rdm:12
-func parse(texts []string) Result[Point[int], error] {
+func parse(texts []string) rt.Result[Point[int], error] {
 //line errors.rdm:13
-	res := optionOkOr[string, error](listGet[string](texts, 0), errors.New("no x"))
-	if !res.ok {
-		return Err[Point[int], error](res.err)
+	res := rt.OptionOkOr[string, error](rt.ListGet[string](texts, 0), errors.New("no x"))
+	if !res.IsOk {
+		return rt.Err[Point[int], error](res.Err)
 	}
-	res1 := parseInt(res.value)
-	if !res1.ok {
-		return Err[Point[int], error](res1.err)
+	res1 := rt.ParseInt(res.Value)
+	if !res1.IsOk {
+		return rt.Err[Point[int], error](res1.Err)
 	}
-	x := res1.value
+	x := res1.Value
 //line errors.rdm:14
-	res2 := optionOkOr[string, error](listGet[string](texts, 1), errors.New("no y"))
-	if !res2.ok {
-		return Err[Point[int], error](res2.err)
+	res2 := rt.OptionOkOr[string, error](rt.ListGet[string](texts, 1), errors.New("no y"))
+	if !res2.IsOk {
+		return rt.Err[Point[int], error](res2.Err)
 	}
-	res3 := parseInt(res2.value)
-	if !res3.ok {
-		return Err[Point[int], error](res3.err)
+	res3 := rt.ParseInt(res2.Value)
+	if !res3.IsOk {
+		return rt.Err[Point[int], error](res3.Err)
 	}
-	y := res3.value
+	y := res3.Value
 //line errors.rdm:15
-	return Ok[Point[int], error](Point[int]{x: x, y: y})
+	return rt.Ok[Point[int], error](Point[int]{x: x, y: y})
 }
 
 //line errors.rdm:18
-func main_(sys Sys) Result[struct{}, error] {
+func main_(sys rt.Sys) rt.Result[struct{}, error] {
 //line errors.rdm:19
 	scale := 2
 //line errors.rdm:20
 	res := parse([]string{"3", "4"})
-	if !res.ok {
-		return Err[struct{}, error](res.err)
+	if !res.IsOk {
+		return rt.Err[struct{}, error](res.Err)
 	}
 	scale_1 := scale
-	scaled := res.value.map_[int](func(v int) int {
+	scaled := res.Value.map_[int](func(v int) int {
 		return v * scale_1
 	})
 //line errors.rdm:21
@@ -65,7 +66,7 @@ func main_(sys Sys) Result[struct{}, error] {
 		return strconv.Itoa(v_1)
 	})
 //line errors.rdm:23
-	sys.out.println(p.x + "," + p.y + " " + strconv.Itoa(scale))
+	sys.Out.Println(p.x + "," + p.y + " " + strconv.Itoa(scale))
 //line errors.rdm:24
-	return Ok[struct{}, error](struct{}{})
+	return rt.Ok[struct{}, error](struct{}{})
 }

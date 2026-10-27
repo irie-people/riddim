@@ -4,6 +4,7 @@ package main
 
 import (
 	"math"
+	"riddimprog/rt"
 	"strconv"
 )
 
@@ -67,7 +68,7 @@ func (self Point) norm() float64 {
 // line this is not a directive
 //
 //line docs.rdm:40
-func main_(sys Sys) {
+func main_(sys rt.Sys) {
 //line docs.rdm:42
 	p := Point{x: 3.0, y: 4.0}
 //line docs.rdm:43
@@ -83,5 +84,5 @@ func main_(sys Sys) {
 		r = 0.0
 	}
 //line docs.rdm:49
-	sys.out.println(strconv.FormatFloat(p.norm(), 'g', -1, 64) + " " + strconv.Itoa(MAX_RETRIES) + " " + strconv.FormatBool(c == Color_Blue) + " " + strconv.FormatFloat(r, 'g', -1, 64))
+	sys.Out.Println(strconv.FormatFloat(p.norm(), 'g', -1, 64) + " " + strconv.Itoa(MAX_RETRIES) + " " + strconv.FormatBool(c == Color_Blue) + " " + strconv.FormatFloat(r, 'g', -1, 64))
 }

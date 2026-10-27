@@ -3,6 +3,7 @@
 package main
 
 import (
+	"riddimprog/rt"
 	"strconv"
 	"unicode"
 	"unicode/utf8"
@@ -12,27 +13,27 @@ import (
 const REPLACEMENT int = int(utf8.RuneError)
 
 //line gopkgs.rdm:7
-func count(text string, xs []byte) Result[int, error] {
+func count(text string, xs []byte) rt.Result[int, error] {
 //line gopkgs.rdm:8
-	res := goResult(strconv.Atoi(text))
-	if !res.ok {
-		return Err[int, error](res.err)
+	res := rt.GoResult(strconv.Atoi(text))
+	if !res.IsOk {
+		return rt.Err[int, error](res.Err)
 	}
-	n := res.value
+	n := res.Value
 //line gopkgs.rdm:9
-	upper := listMap[int, bool]([]int{72, 105}, func(p0 int) bool {
+	upper := rt.ListMap[int, bool]([]int{72, 105}, func(p0 int) bool {
 		return unicode.IsUpper(rune(p0))
 	})
 //line gopkgs.rdm:10
-	return Ok[int, error](n + utf8.RuneCount(listCopy(xs)) + len(upper) + int(unicode.ToUpper(rune(REPLACEMENT))))
+	return rt.Ok[int, error](n + utf8.RuneCount(rt.ListCopy(xs)) + len(upper) + int(unicode.ToUpper(rune(REPLACEMENT))))
 }
 
 //line gopkgs.rdm:13
-func main_(sys Sys) Result[struct{}, error] {
+func main_(sys rt.Sys) rt.Result[struct{}, error] {
 //line gopkgs.rdm:14
-	sys.out.println(resultUnwrapOr[string, error](resultMap[int, error, string](count("1", []byte{byte(104)}), func(n int) string {
+	sys.Out.Println(rt.ResultUnwrapOr[string, error](rt.ResultMap[int, error, string](count("1", []byte{byte(104)}), func(n int) string {
 		return strconv.Itoa(n)
 	}), "?"))
 //line gopkgs.rdm:15
-	return Ok[struct{}, error](struct{}{})
+	return rt.Ok[struct{}, error](struct{}{})
 }

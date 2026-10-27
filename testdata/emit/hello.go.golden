@@ -2,8 +2,12 @@
 
 package main
 
+import (
+	"riddimprog/rt"
+)
+
 //line hello.rdm:1
-func main_(sys Sys) {
+func main_(sys rt.Sys) {
 //line hello.rdm:2
-	sys.out.println("hello, world")
+	sys.Out.Println("hello, world")
 }

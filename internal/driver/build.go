@@ -22,6 +22,9 @@ import (
 // GoMod is the go.mod written next to the generated Go.
 const GoMod = "module riddimprog\n\ngo 1.27\n"
 
+// RuntimePath is the import path of the runtime package in that module.
+const RuntimePath = "riddimprog/" + emit.RuntimeDir
+
 // GenDir is where build and run write the generated Go for a program.
 func GenDir(dir string) string { return filepath.Join(dir, ".riddim", "go") }
 
@@ -54,10 +57,15 @@ func (u *Unit) emit(outDir string) ([]diag.Diagnostic, map[string][]byte, error)
 			return abs
 		}
 		return filepath.ToSlash(rel)
-	})
+	}, RuntimePath)
 	if err != nil {
 		return append(ds, internalDiag(u, err.Error())), nil, nil
 	}
+	rt, err := emit.Runtime()
+	if err != nil {
+		return append(ds, internalDiag(u, err.Error())), nil, nil
+	}
+	files[emit.RuntimeDir+"/rt.go"] = rt
 	files["go.mod"] = []byte(GoMod)
 	if err := writeFiles(outDir, files); err != nil {
 		return ds, nil, err

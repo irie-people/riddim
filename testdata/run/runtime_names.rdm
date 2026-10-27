@@ -1,0 +1,18 @@
+// Names that the generated Go uses for the runtime package, rt, are free for
+// Riddim code: a function, a local and a field called rt.
+
+struct Box {
+    rt: Int,
+}
+
+fn rt(x: Int) -> Option<Int> {
+    if x > 0 { Some(x) } else { None }
+}
+
+fn main(sys: Sys) {
+    let rt_value = rt(2).unwrap_or(0)
+    let b = Box { rt: rt_value }
+    let rt = [b.rt, 3]
+    let m: Map<String, Int> = Map::new().insert("rt", rt.sum())
+    sys.out.println("${rt_value} ${b.rt} ${rt.len()} ${m.get("rt").unwrap_or(0)}")
+}

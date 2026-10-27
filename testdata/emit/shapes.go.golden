@@ -3,6 +3,7 @@
 package main
 
 import (
+	"riddimprog/rt"
 	"strconv"
 )
 
@@ -55,7 +56,7 @@ func describe(s Shape, c Color) string {
 	var size string
 	if v, ok := s.(Shape_Circle); ok && (v.radius > 10.0) {
 		size = "big circle"
-	} else if isVariant[Shape_Circle](s) || isVariant[Shape_Empty](s) {
+	} else if rt.IsVariant[Shape_Circle](s) || rt.IsVariant[Shape_Empty](s) {
 		size = "small"
 	} else {
 		size = "rect"
@@ -72,9 +73,9 @@ func describe(s Shape, c Color) string {
 }
 
 //line shapes.rdm:32
-func main_(sys Sys) {
+func main_(sys rt.Sys) {
 //line shapes.rdm:33
 	var s Shape = Shape_Circle{radius: 2.0}
 //line shapes.rdm:34
-	sys.out.println(describe(s, Color_Red) + " " + strconv.FormatFloat(Shape_area(s), 'g', -1, 64))
+	sys.Out.Println(describe(s, Color_Red) + " " + strconv.FormatFloat(Shape_area(s), 'g', -1, 64))
 }
