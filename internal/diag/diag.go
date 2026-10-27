@@ -68,6 +68,17 @@ func HasErrors(ds []Diagnostic) bool {
 	return false
 }
 
+// HasBlocking reports whether any diagnostic is an error other than a Rust or
+// Go habit: one that stops the stages after the one that found it.
+func HasBlocking(ds []Diagnostic) bool {
+	for _, d := range ds {
+		if d.Severity == Error && !IsHabit(d.Code) {
+			return true
+		}
+	}
+	return false
+}
+
 // Sort orders diagnostics by file, position and code.
 func Sort(ds []Diagnostic) {
 	sort.SliceStable(ds, func(i, j int) bool {

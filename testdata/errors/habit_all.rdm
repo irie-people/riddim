@@ -1,0 +1,44 @@
+use std::collections::HashMap;
+
+#[derive(Debug, Clone)]
+pub struct Point<'a> {
+    x: i64,
+    tags: Vec<String>,
+    name: &'a str,
+}
+
+func describe(p: &Point) -> String {
+    let words = p.tags.iter().map(|t| t.clone()).collect::<Vec<_>>()
+    format!("{} has {} tags", p.name.to_owned(), words.len())
+}
+
+fn lookup(counts: HashMap<String, i64>, key: String) -> Option<i64> {
+    if counts.get(key) == nil {
+        return nil
+    }
+    counts.get(key)
+}
+
+fn parse(text: String) -> Result<Int, Error> {
+    let n = text.parse_int()
+    if err != nil {
+        return Err(error("bad"))
+    }
+    n
+}
+
+fn main(sys: Sys) {
+    var total = 0
+    count := 1
+    total++
+    let xs = vec![1, 2, 3]
+    let mut names: HashMap<String, i64> = HashMap::new()
+    let s = String::from("a")
+    let p = Point { x: 1, tags: Vec::new(), name: "p" }
+    let q = &p
+    println!("{} {}", describe(*q), lookup(names, s))
+    'outer: loop {
+        break 'outer
+    }
+    let b: Box<Int> = Box::new(1)
+}

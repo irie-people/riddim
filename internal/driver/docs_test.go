@@ -67,7 +67,7 @@ var habits = []struct {
 	{"R0108", true}, {"R0109", true}, {"R0110", true}, {"R0111", true}, {"R0112", true},
 	{"R0113", true}, {"R0114", true}, {"R0115", true}, {"R0116", true}, {"R0117", true},
 	{"R0118", true}, {"R0119", true}, {"R0120", false}, {"R0121", true}, {"R0122", true},
-	{"R0123", true}, {"R0124", true},
+	{"R0123", true}, {"R0124", true}, {"R0125", true},
 }
 
 // TestHabits is the M2 check of DESIGN §10.1: each habit has an error test

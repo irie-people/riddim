@@ -1,5 +1,7 @@
 package syntax
 
+import "github.com/riddim-hq/riddim/internal/diag"
+
 // A Node is any syntax tree node.
 type Node interface{ Span() Span }
 
@@ -7,6 +9,13 @@ type Node interface{ Span() Span }
 type File struct {
 	Source *Source
 	Decls  []Decl
+	// Complete is set when no declaration was dropped after a syntax error:
+	// the declarations are the whole file, read as if the fixes of its Rust
+	// and Go habits were made.
+	Complete bool
+	// Habits are the Rust and Go habits the token pre-scan found. They stand
+	// in for the parser's and checker's own reports when those cannot run.
+	Habits []diag.Diagnostic
 }
 
 // An Ident is a name.
@@ -104,17 +113,26 @@ type ConstDecl struct {
 	Value Expr
 }
 
+// A UseDecl is `use go "path"`, which imports a Go package.
+type UseDecl struct {
+	Use      Pos
+	Path     string // the decoded string
+	PathSpan Span
+}
+
 func (d *FuncDecl) Span() Span   { return Span{d.Fn, d.Body.Rbrace + 1} }
 func (d *StructDecl) Span() Span { return Span{d.Struct, d.Rbrace + 1} }
 func (d *EnumDecl) Span() Span   { return Span{d.Enum, d.Rbrace + 1} }
 func (d *ImplDecl) Span() Span   { return Span{d.Impl, d.Rbrace + 1} }
 func (d *ConstDecl) Span() Span  { return Span{d.Const, d.Value.Span().End} }
+func (d *UseDecl) Span() Span    { return Span{d.Use, d.PathSpan.End} }
 
 func (*FuncDecl) declNode()   {}
 func (*StructDecl) declNode() {}
 func (*EnumDecl) declNode()   {}
 func (*ImplDecl) declNode()   {}
 func (*ConstDecl) declNode()  {}
+func (*UseDecl) declNode()    {}
 
 // ---- Types ----
 
@@ -250,6 +268,15 @@ type (
 		Name   *Ident
 		Args   []Expr
 		Rparen Pos
+	}
+	// MacroCall is a Rust macro call such as `println!(...)`. Riddim has no
+	// macros: the parser reports it (R0115), and the checker reads it as
+	// what its fix would leave. Rust's `name = value` arguments keep only
+	// the value.
+	MacroCall struct {
+		Name *Ident
+		Args []Expr
+		End  Pos
 	}
 	// FieldExpr is `x.name` or a tuple field `x.0`.
 	FieldExpr struct {
@@ -403,6 +430,7 @@ func (x *UnitLit) Span() Span        { return Span{x.Lparen, x.Rparen + 1} }
 func (x *PathExpr) Span() Span       { return Span{x.Type.NamePos, x.Name.Span().End} }
 func (x *CallExpr) Span() Span       { return Span{x.Fun.Span().Start, x.Rparen + 1} }
 func (x *MethodCallExpr) Span() Span { return Span{x.Recv.Span().Start, x.Rparen + 1} }
+func (x *MacroCall) Span() Span      { return Span{x.Name.NamePos, x.End} }
 func (x *FieldExpr) Span() Span      { return Span{x.X.Span().Start, x.Name.Span().End} }
 func (x *IndexExpr) Span() Span      { return Span{x.X.Span().Start, x.Rbrack + 1} }
 func (x *TryExpr) Span() Span        { return Span{x.X.Span().Start, x.Quest + 1} }
@@ -453,6 +481,7 @@ func (*Ident) exprNode()          {}
 func (*PathExpr) exprNode()       {}
 func (*CallExpr) exprNode()       {}
 func (*MethodCallExpr) exprNode() {}
+func (*MacroCall) exprNode()      {}
 func (*FieldExpr) exprNode()      {}
 func (*IndexExpr) exprNode()      {}
 func (*TryExpr) exprNode()        {}

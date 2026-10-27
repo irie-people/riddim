@@ -4,7 +4,7 @@ Every diagnostic has a stable code, an exact span and, where it can, a fix that 
 
 The compiler stops after the first stage that reports errors: syntax (R01xx), then names and types (R02xx, R03xx, R05xx, R06xx, R0403, R0404, and the habits R0109, R0110, R0113, R0114 and R0117 to R0120 that need names or types to tell), then patterns (R0401, R0402). W0001 waits until there are no errors.
 
-R0108 to R0124 are habits carried over from Rust or Go (DESIGN §7.2). Each has its own code and, where the rewrite is mechanical, a fix; the compiler then reads on as if the fix were made, so one round reports every habit in a stage.
+R0108 to R0125 are habits carried over from Rust or Go (DESIGN §7.2). Each has its own code and, where the rewrite is mechanical, a fix. Habits do not stop the stages: the compiler reads on as if each fix were made, so one round reports every habit. When a syntax error stops the parser, the habits the tokens alone show are still reported, each once.
 
 This file covers milestone M2. Each entry shows the mistake, then the fix.
 
@@ -59,7 +59,7 @@ The parser expected something else. The message says what it expected and what i
 
 ## R0108 Go's var or :=
 
-Riddim declares a binding with `let`, and one that is reassigned with `let mut`. Go's `for i := 0; i < n; i++` is a range loop. Go's `n, err := f()` is `let n = f()?`, since a function that can fail returns a Result (no fix).
+Riddim declares a binding with `let`, and one that is reassigned with `let mut`. Go's `for i := 0; i < n; i++` is a range loop. Go's `n, err := f()` is `let n = f()?`, since a function that can fail returns a Result, and Go's `for i, x := range xs` is `for (i, x) in xs.enumerate()` or `for x in xs` (no fix for these two).
 
     var total = 0
     let mut total = 0                            // fix; `n := 5` becomes `let n = 5`
@@ -94,7 +94,7 @@ Nothing is borrowed, so there are no lifetimes; `break` and `continue` leave the
 
 ## R0113 Vec, vec! or a Go slice
 
-Riddim's list is `List<T>`, written `[1, 2]`; the empty list is `[]`. The fix rewrites `Vec<T>`, `vec![...]`, `Vec::new()`, Go's `[]T` and Rust's `[T; N]`. `vec![x; n]` has no fix: build the list in a loop.
+Riddim's list is `List<T>`, written `[1, 2]`; the empty list is `[]`. The fix rewrites `Vec<T>`, `vec![...]`, `Vec::new()`, Go's `[]T` and Rust's `[T; N]` and `[T]`. `vec![x; n]` has no fix: build the list in a loop.
 
     let xs: Vec<i32> = vec![1, 2]
     let xs: List<i32> = [1, 2]                                                   // fix (then R0110)
@@ -176,6 +176,13 @@ Riddim declares a function with `fn`. The fix renames `func`.
 
     func main() { }
     fn main() { }                                                                // fix
+
+## R0125 Go's package or import, or Rust's use
+
+A program is the `.rdm` files of one directory, and Riddim's own types need no import. The fix deletes Go's `package` clause and Rust's `use std::...;`, and writes Go's `import "strings"` as `use go "strings"`.
+
+    import "strings"
+    use go "strings"                                                             // fix
 
 ## R0201 unknown name
 

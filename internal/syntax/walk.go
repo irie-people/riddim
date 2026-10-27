@@ -30,6 +30,10 @@ func Inspect(n Node, f func(Node) bool) {
 		for _, a := range n.Args {
 			each(a)
 		}
+	case *MacroCall:
+		for _, a := range n.Args {
+			each(a)
+		}
 	case *FieldExpr:
 		each(n.X)
 	case *IndexExpr:

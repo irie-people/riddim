@@ -30,6 +30,7 @@ var Codes = map[string]string{
 	"R0122": "attribute",
 	"R0123": "++ or --",
 	"R0124": "func",
+	"R0125": "Go's package or import, or Rust's use",
 
 	"R0201": "unknown name",
 	"R0202": "duplicate name",
@@ -63,4 +64,11 @@ var Codes = map[string]string{
 	"W0001": "unused binding",
 	"W0002": "unwrap or expect",
 	"W0003": "todo",
+}
+
+// IsHabit reports whether code is one of the Rust and Go habits (DESIGN
+// §7.2), R0108 to R0125. The compiler reads a program as if each habit's fix
+// were made, so a habit does not stop the stages after the one that found it.
+func IsHabit(code string) bool {
+	return len(code) == 5 && code >= "R0108" && code <= "R0125"
 }

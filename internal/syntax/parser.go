@@ -11,18 +11,21 @@ import (
 // Parse lexes and parses one source file. It reports every independent
 // syntax error it can: after an error it skips to the next top-level
 // declaration.
+//
+// Parsing reads on after a Rust or Go habit as if its fix were made, so a
+// file whose only errors are habits is Complete. The token pre-scan's
+// reports go in f.Habits for the driver to use when the parser or the
+// checker cannot reach them (DESIGN §7.2).
 func Parse(fs *FileSet, src *Source) (*File, []diag.Diagnostic) {
 	toks, lexDiags := Lex(fs, src)
 	p := &parser{fs: fs, src: src, toks: toks, tok: toks[0]}
-	f := &File{Source: src}
+	f := &File{Source: src, Habits: scanHabits(fs, src, toks)}
 	for p.tok.Kind != EOF {
 		if p.tok.Kind == TERM {
 			p.next()
 			continue
 		}
-		if d := p.declRecover(); d != nil {
-			f.Decls = append(f.Decls, d)
-		}
+		f.Decls = append(f.Decls, p.declRecover()...)
 	}
 	// A lexical error often confuses the parser on the same line; keep only
 	// the lexical one there.
@@ -38,6 +41,7 @@ func Parse(fs *FileSet, src *Source) (*File, []diag.Diagnostic) {
 			diags = append(diags, d)
 		}
 	}
+	f.Complete = !p.bailed && !diag.HasBlocking(diags)
 	return f, diags
 }
 
@@ -52,6 +56,7 @@ type parser struct {
 	noStruct bool
 	params   []*Param // the parameters of the function being parsed
 	diags    []diag.Diagnostic
+	bailed   bool // a declaration was dropped after a syntax error
 }
 
 type bailout struct{}
@@ -124,14 +129,15 @@ func isDeclStart(k Kind) bool {
 	return false
 }
 
-func (p *parser) declRecover() (d Decl) {
+func (p *parser) declRecover() (ds []Decl) {
 	defer func() {
 		if r := recover(); r != nil {
 			if _, ok := r.(bailout); !ok {
 				panic(r)
 			}
+			p.bailed = true
 			p.sync()
-			d = nil
+			ds = nil
 		}
 	}()
 	return p.decl()
@@ -142,7 +148,7 @@ func (p *parser) declRecover() (d Decl) {
 func (p *parser) sync() {
 	p.next()
 	for p.tok.Kind != EOF {
-		start := isDeclStart(p.tok.Kind) || p.tok.Kind == IDENT && (p.tok.Text == "pub" || p.tok.Text == "func")
+		start := isDeclStart(p.tok.Kind) || p.tok.Kind == IDENT && goDeclWords[p.tok.Text]
 		if start && p.tok.NL {
 			if _, col := p.src.LineCol(p.tok.Pos); p.depth <= 0 || col == 1 {
 				p.depth = 0
@@ -155,7 +161,34 @@ func (p *parser) sync() {
 	}
 }
 
-func (p *parser) decl() Decl {
+// goDeclWords are the words that start a declaration in Rust or Go but not
+// in Riddim; after a syntax error, the parser resumes at them too.
+var goDeclWords = map[string]bool{"pub": true, "func": true, "package": true, "import": true}
+
+// isModuleHabit reports whether the parser is at Go's `package name` or
+// `import`, or Rust's `use path`, which Riddim does not need (R0125).
+func (p *parser) isModuleHabit() bool {
+	switch next := p.peek(); {
+	case p.tok.Kind == USE:
+		return next.Kind == IDENT
+	case p.tok.Kind != IDENT:
+		return false
+	case p.tok.Text == "package":
+		return next.Kind == IDENT
+	case p.tok.Text == "import":
+		return next.Kind == STRING || next.Kind == LPAREN || next.Kind == IDENT && p.peekAt(2).Kind == STRING
+	}
+	return false
+}
+
+func (p *parser) decl() []Decl {
+	if p.isModuleHabit() {
+		ds := p.moduleHabit()
+		if p.tok.Kind != EOF {
+			p.expect(TERM, "end of line")
+		}
+		return ds
+	}
 	if p.isPub() {
 		p.pub()
 	}
@@ -175,20 +208,14 @@ func (p *parser) decl() Decl {
 	case CONST:
 		d = p.constDecl()
 	case USE:
-		start := p.tok.Pos
-		end := p.tok.End
-		for p.tok.Kind != TERM && p.tok.Kind != EOF {
-			end = p.tok.End
-			p.next()
-		}
-		p.fail("R0106", Span{start, end}, "`use go` is not supported in this version")
+		d = p.useGo()
 	default:
-		p.unexpected("a declaration (fn, struct, enum, impl or const)")
+		p.unexpected("a declaration (fn, struct, enum, impl, const or use go)")
 	}
 	if p.tok.Kind != EOF {
 		p.expect(TERM, "end of line after the declaration")
 	}
-	return d
+	return []Decl{d}
 }
 
 func (p *parser) typeParams() []*Ident {
@@ -426,8 +453,6 @@ func (p *parser) constDecl() *ConstDecl {
 
 // ---- Types ----
 
-var laterTypes = map[string]bool{"Env": true, "Fs": true, "Clock": true}
-
 func (p *parser) typ() TypeExpr {
 	switch p.tok.Kind {
 	case AMP:
@@ -441,9 +466,6 @@ func (p *parser) typ() TypeExpr {
 			return p.goMapType()
 		}
 		name := &Ident{NamePos: p.tok.Pos, Name: p.tok.Text}
-		if laterTypes[name.Name] {
-			p.report("R0106", name.Span(), "`%s` is not supported in this version", name.Name)
-		}
 		p.next()
 		nt := &NamedType{Name: name}
 		if p.tok.Kind == LT {
@@ -554,7 +576,14 @@ func (p *parser) stmt() Stmt {
 	switch p.tok.Kind {
 	case LET:
 		return p.letStmt()
-	case FN, STRUCT, ENUM, IMPL, CONST, USE:
+	case USE:
+		if p.isModuleHabit() {
+			pos := p.tok.Pos
+			p.moduleHabit()
+			return &ExprStmt{X: &UnitLit{Lparen: pos, Rparen: pos}}
+		}
+		p.fail("R0105", p.tok.Span(), "`use` declarations go at the top level of a file")
+	case FN, STRUCT, ENUM, IMPL, CONST:
 		p.fail("R0105", p.tok.Span(), "`%s` declarations go at the top level of a file", p.tok.Kind)
 	case IDENT:
 		if p.tok.Text == "var" && p.peek().Kind == IDENT {
@@ -1068,6 +1097,8 @@ func (p *parser) forExpr() Expr {
 		return &LoopExpr{Loop: pos, Body: p.loopBody()}
 	case p.tok.Kind == IDENT && p.peek().Kind == COLONEQ:
 		return p.goFor(pos)
+	case p.tok.Kind == IDENT && p.peek().Kind == COMMA && p.peekAt(2).Kind == IDENT && p.peekAt(3).Kind == COLONEQ:
+		p.goRange(p.tok, p.peekAt(3))
 	}
 	f := &ForExpr{For: pos, Pat: p.pattern()}
 	if _, ok := f.Pat.(*BindPat); ok && p.tok.Kind != IN {

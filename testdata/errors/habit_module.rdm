@@ -1,0 +1,13 @@
+package main
+
+import (
+    "strings"
+    "unicode/utf8"
+)
+
+use std::collections::HashMap;
+
+fn main() {
+    use std::fmt;
+    let _ = 1
+}

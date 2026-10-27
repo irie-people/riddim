@@ -263,7 +263,7 @@ W0001 unused binding (the fix replaces it with `_`; names starting with `_` are 
 
 ## Differences from Rust
 
-Each Rust or Go habit below has its own error code (R0108 to R0124) and, where the rewrite is mechanical, a fix.
+Each Rust or Go habit below has its own error code (R0108 to R0125) and, where the rewrite is mechanical, a fix. Habits do not stop the compiler: one check reports them all.
 
 | Rust | Riddim |
 |---|---|
@@ -288,7 +288,8 @@ Each Rust or Go habit below has its own error code (R0108 to R0124) and, where t
 | Go's `var x = 1`, `x := 1`, `x++` | `let mut x = 1`, `let x = 1`, `x += 1` |
 | Go's `nil`, `if err != nil { return err }` | `None`; `?` on the call that can fail |
 | Go's `func`, `for i := 0; i < n; i++`, `for cond`, `for {` | `fn`, `for i in 0..n`, `while cond`, `loop` |
-| Go's `[]T`, `map[K]V`, `*T` | `List<T>`, `Map<K, V>`, `T` |
+| Go's `[]T`, `map[K]V`, `*T`, `for i, x := range xs` | `List<T>`, `Map<K, V>`, `T`, `for (i, x) in xs.enumerate()` |
+| Go's `package main`, `import "strings"`; Rust's `use std::...` | Nothing; `use go "strings"` (M3); nothing |
 
 ## Not in M2
 

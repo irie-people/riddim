@@ -1,8 +1,6 @@
 package check
 
 import (
-	"fmt"
-
 	"github.com/riddim-hq/riddim/internal/diag"
 	"github.com/riddim-hq/riddim/internal/syntax"
 )
@@ -21,17 +19,6 @@ func (c *checker) replaceFix(d *diag.Diagnostic, title string, sp syntax.Span, t
 	d.Fixes = append(d.Fixes, diag.Fix{Title: title, Edits: []diag.Edit{c.fset.Edit(sp, text)}})
 }
 
-// habitTypes are the Rust and Go names of Riddim's primitive types (R0110).
-var habitTypes = map[string]string{
-	"i8": "Int", "i16": "Int", "i32": "Int", "i64": "Int", "i128": "Int", "isize": "Int",
-	"u16": "Int", "u32": "Int", "u64": "Int", "u128": "Int", "usize": "Int",
-	"int": "Int", "int8": "Int", "int16": "Int", "int32": "Int", "int64": "Int",
-	"uint": "Int", "uint16": "Int", "uint32": "Int", "uint64": "Int", "uintptr": "Int", "rune": "Int",
-	"u8": "Byte", "uint8": "Byte", "byte": "Byte",
-	"f32": "Float", "f64": "Float", "float32": "Float", "float64": "Float",
-	"bool": "Bool", "str": "String", "string": "String", "char": "String", "error": "Error",
-}
-
 var basicByName = map[string]Type{"Int": Int, "Float": Float, "Bool": Bool, "String": String, "Byte": Byte, "Error": ErrorT}
 
 // habitType resolves a type written as Rust or Go would write it: i32, f64,
@@ -39,35 +26,31 @@ var basicByName = map[string]Type{"Int": Int, "Float": Float, "Bool": Bool, "Str
 // It returns nil for any other name.
 func (c *checker) habitType(t *syntax.NamedType, args []Type) Type {
 	name := t.Name.Name
-	if to, ok := habitTypes[name]; ok && len(args) == 0 {
-		d := c.errorf("R0110", t.Name.Span(), "`%s` is not a Riddim type: write `%s`", name, to)
-		switch {
-		case name == "char":
-			d.Notes = append(d.Notes, "Riddim has no character type: a character is a String of one character")
-		case to == "Int" && name != "int" && name != "rune":
-			d.Notes = append(d.Notes, "Riddim has one integer type, Int, 64 bits and signed, and Byte for 0 to 255")
-		}
+	if _, ok := syntax.HabitTypes[name]; ok && len(args) == 0 {
+		to, msg, notes := syntax.HabitTypeMsg(name)
+		d := c.errorf("R0110", t.Name.Span(), "%s", msg)
+		d.Notes = append(d.Notes, notes...)
 		c.replaceFix(d, "write "+to, t.Name.Span(), to)
 		return basicByName[to]
 	}
 	switch name {
 	case "Vec", "VecDeque":
 		if len(args) == 1 {
-			d := c.errorf("R0113", t.Name.Span(), "`%s` is Rust: Riddim's list type is `List`", name)
+			d := c.errorf("R0113", t.Name.Span(), syntax.HabitVecMsg, name)
 			c.replaceFix(d, "write List", t.Name.Span(), "List")
 			return &List{args[0]}
 		}
 	case "HashMap", "BTreeMap":
 		if len(args) == 2 {
-			d := c.errorf("R0114", t.Name.Span(), "`%s` is Rust: Riddim's map type is `Map`, which keeps its keys in insertion order", name)
+			d := c.errorf("R0114", t.Name.Span(), syntax.HabitMapMsg, name)
 			c.replaceFix(d, "write Map", t.Name.Span(), "Map")
 			return &Map{args[0], args[1]}
 		}
 	case "Box", "Rc", "Arc", "RefCell", "Cell":
 		if len(args) == 1 {
 			inner := c.text(t.Args[0].Span())
-			d := c.errorf("R0111", t.Span(), "Riddim has no pointers or references: hold the value itself; write `%s`", inner)
-			d.Notes = append(d.Notes, "enums may be recursive, and a struct may hold a List of itself")
+			d := c.errorf("R0111", t.Span(), syntax.HabitBoxMsg, inner)
+			d.Notes = append(d.Notes, syntax.HabitBoxNote)
 			c.replaceFix(d, "hold the value", t.Span(), inner)
 			return args[0]
 		}
@@ -86,7 +69,7 @@ func (c *checker) habitPath(e *syntax.CallExpr, fun *syntax.PathExpr, want Type)
 	c.info.Types[fun] = invalid
 	switch {
 	case (tn == "Vec" || tn == "List") && (fname == "new" || fname == "with_capacity"):
-		d := c.errorf("R0113", e.Span(), "Riddim writes an empty list as `[]`; annotate the binding if its type is needed, as in `let xs: List<Int> = []`")
+		d := c.errorf("R0113", e.Span(), "%s", syntax.HabitVecNewMsg)
 		c.replaceFix(d, "write []", e.Span(), "[]")
 		for _, a := range e.Args {
 			c.expr(a, nil)
@@ -96,7 +79,7 @@ func (c *checker) habitPath(e *syntax.CallExpr, fun *syntax.PathExpr, want Type)
 		}
 		return invalid, true
 	case (tn == "HashMap" || tn == "BTreeMap") && (fname == "new" || fname == "with_capacity"):
-		d := c.errorf("R0114", e.Span(), "Riddim's map is `Map`: make an empty one with `Map::new()`")
+		d := c.errorf("R0114", e.Span(), "%s", syntax.HabitMapNewMsg)
 		c.replaceFix(d, "write Map::new()", e.Span(), "Map::new()")
 		for _, a := range e.Args {
 			c.expr(a, nil)
@@ -106,15 +89,15 @@ func (c *checker) habitPath(e *syntax.CallExpr, fun *syntax.PathExpr, want Type)
 		}
 		return invalid, true
 	case (tn == "Box" || tn == "Rc" || tn == "Arc") && fname == "new" && len(e.Args) == 1:
-		d := c.errorf("R0111", e.Span(), "Riddim has no pointers or references: use the value itself")
+		d := c.errorf("R0111", e.Span(), "%s", syntax.HabitBoxNewMsg)
 		c.replaceFix(d, "use the value", e.Span(), c.text(e.Args[0].Span()))
 		return c.expr(e.Args[0], want), true
 	case tn == "String" && fname == "new" && len(e.Args) == 0:
-		d := c.errorf("R0119", e.Span(), "a String is a value: the empty string is `\"\"`")
+		d := c.errorf("R0119", e.Span(), "%s", syntax.HabitStringNewMsg)
 		c.replaceFix(d, `write ""`, e.Span(), `""`)
 		return String, true
 	case tn == "String" && fname == "from" && len(e.Args) == 1:
-		d := c.errorf("R0119", e.Span(), "a String is a value: use the string itself, without `String::from`")
+		d := c.errorf("R0119", e.Span(), "%s", syntax.HabitStringFromMsg)
 		c.replaceFix(d, "use the string itself", e.Span(), c.text(e.Args[0].Span()))
 		c.expr(e.Args[0], String)
 		return String, true
@@ -122,34 +105,16 @@ func (c *checker) habitPath(e *syntax.CallExpr, fun *syntax.PathExpr, want Type)
 	return nil, false
 }
 
-// habitMethods are Rust's methods that only borrow, copy or convert, which
-// Riddim's values do not need: R0117 for iterators, R0118 for copies, R0119
-// for owned strings.
-var habitMethods = map[string]string{
-	"iter": "R0117", "into_iter": "R0117", "iter_mut": "R0117", "collect": "R0117",
-	"clone": "R0118", "cloned": "R0118", "copied": "R0118", "to_vec": "R0118",
-	"to_owned": "R0119", "as_str": "R0119",
-}
-
-// habitMethod reports one of habitMethods called on a value whose type has
-// no method of that name, with a fix that deletes the call, and types the
-// call as its receiver.
+// habitMethod reports one of syntax.HabitMethods called on a value whose
+// type has no method of that name, with a fix that deletes the call, and
+// types the call as its receiver.
 func (c *checker) habitMethod(e *syntax.MethodCallExpr, rt Type) (Type, bool) {
 	name := e.Name.Name
-	code := habitMethods[name]
+	code := syntax.HabitMethods[name]
 	if code == "" || name == "as_str" && Resolve(rt) != String {
 		return nil, false
 	}
-	var msg string
-	switch code {
-	case "R0117":
-		msg = fmt.Sprintf("`.%s()` is not needed: `for` and the List and Map methods, such as map, filter and fold, work on the value itself", name)
-	case "R0118":
-		msg = fmt.Sprintf("`.%s()` is not needed: values are copied when they are bound, passed or returned", name)
-	default:
-		msg = fmt.Sprintf("`.%s()` is not needed: a String is a value; use it as it is", name)
-	}
-	d := c.errorf(code, e.Name.Span(), "%s", msg)
+	d := c.errorf(code, e.Name.Span(), "%s", syntax.HabitMethodMsg(name))
 	c.replaceFix(d, "delete `."+name+"()`", syntax.Span{Start: e.Recv.Span().End, End: e.Rparen + 1}, "")
 	for _, a := range e.Args {
 		c.expr(a, nil)
@@ -170,7 +135,7 @@ func (c *checker) isNil(x syntax.Expr) bool {
 // nilValue reports Go's nil used as a value (R0109). Where an Option is
 // expected the fix writes None; where a Result<(), E> is, Ok(()).
 func (c *checker) nilValue(e *syntax.Ident, want Type) Type {
-	d := c.errorf("R0109", e.Span(), "Riddim has no `nil`: a value that may be absent is an Option, and its empty case is `None`")
+	d := c.errorf("R0109", e.Span(), "%s", syntax.HabitNilMsg)
 	switch w := Resolve(want).(type) {
 	case *Option:
 		c.replaceFix(d, "write None", e.Span(), "None")
@@ -214,7 +179,7 @@ func (c *checker) nilCompare(e *syntax.BinaryExpr) bool {
 		if e.Op == syntax.NE {
 			method = "is_some()"
 		}
-		d := c.errorf("R0109", nilSide.Span(), "Riddim has no `nil`: test an Option with `.%s`", method)
+		d := c.errorf("R0109", nilSide.Span(), syntax.HabitNilTestMsg, method)
 		text := c.text(other.Span())
 		switch unparen(other).(type) {
 		case *syntax.BinaryExpr, *syntax.UnaryExpr, *syntax.AsExpr, *syntax.ClosureExpr:
@@ -223,7 +188,41 @@ func (c *checker) nilCompare(e *syntax.BinaryExpr) bool {
 		c.replaceFix(d, "call "+method, e.Span(), text+"."+method)
 		return true
 	}
-	d := c.errorf("R0120", e.Span(), "Riddim has no `nil`: a function that can fail returns a Result; pass its error on with `?`, as in `let n = text.parse_int()?`, or match on the Result")
-	d.Notes = append(d.Notes, "`x, err := f()` followed by `if err != nil { return err }` is `let x = f()?`")
+	d := c.errorf("R0120", e.Span(), "%s", syntax.HabitErrNilMsg)
+	d.Notes = append(d.Notes, syntax.HabitErrNilNote)
 	return true
+}
+
+// macro types a Rust macro call, which the parser reported (R0115), as what
+// its fix leaves: println! prints, format! makes a String, panic! and todo!
+// do not return. Its arguments are checked for the errors and habits in
+// them. A macro without a Riddim form has no type, so nothing else reports
+// it.
+func (c *checker) macro(e *syntax.MacroCall) Type {
+	var t Type
+	switch e.Name.Name {
+	case "println", "print", "eprintln", "eprint", "assert", "assert_eq", "assert_ne", "debug_assert":
+		t = Unit
+	case "format":
+		t = String
+	case "panic", "unreachable", "todo", "unimplemented":
+		t = Never
+	default:
+		return invalid
+	}
+	for _, a := range e.Args {
+		c.expr(a, nil)
+	}
+	return t
+}
+
+// hasMember reports whether a struct or enum of the program has a method or
+// a field called name.
+func (c *checker) hasMember(name string) bool {
+	for _, td := range c.prog.Types {
+		if td.Method(name) != nil || td.Field(name) != nil {
+			return true
+		}
+	}
+	return false
 }

@@ -82,6 +82,8 @@ func (c *checker) expr0(e syntax.Expr, want Type) Type {
 		return c.call(e, want)
 	case *syntax.MethodCallExpr:
 		return c.methodCall(e, want)
+	case *syntax.MacroCall:
+		return c.macro(e)
 	case *syntax.FieldExpr:
 		return c.field(e)
 	case *syntax.IndexExpr:
@@ -610,6 +612,13 @@ func (c *checker) methodCall(e *syntax.MethodCallExpr, want Type) Type {
 	}
 	switch r := rt.(type) {
 	case *Invalid, *Var:
+		// The receiver's type is not known, but no type of the program has
+		// such a method: a habit is one whatever the receiver.
+		if !c.hasMember(name) {
+			if t, ok := c.habitMethod(e, rt); ok {
+				return t
+			}
+		}
 		return fail()
 	case *Named:
 		m := r.Decl.Method(name)

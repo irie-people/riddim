@@ -1,0 +1,19 @@
+fn total(xs: List<Int>) -> Int {
+    let mut t = 0
+    for _, x := range xs {
+        t += x
+    }
+    t
+}
+
+fn count(xs: List<Int>) -> Int {
+    let mut n = 0
+    for i := range xs {
+        n += i
+    }
+    n
+}
+
+fn main() {
+    let _ = total([1]) + count([2])
+}

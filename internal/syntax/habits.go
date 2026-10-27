@@ -86,6 +86,9 @@ func (p *parser) multiDecl(first *Ident) {
 // goFor parses Go's `for i := a; i < b; i++ {` (R0108). When the loop has
 // exactly that shape, the fix writes `for i in a..b {`.
 func (p *parser) goFor(pos Pos) Expr {
+	if p.peekAt(2).Kind == IDENT && p.peekAt(2).Text == "range" {
+		p.goRange(p.tok, p.peek())
+	}
 	name := p.ident("a name")
 	assign := p.tok
 	p.next()
@@ -129,6 +132,161 @@ func (p *parser) goFor(pos Pos) Expr {
 		end = start
 	}
 	return &ForExpr{For: pos, Pat: &BindPat{Name: name}, Iter: start, End: end, Inclusive: inclusive, Body: p.loopBody()}
+}
+
+// goRange reports Go's `for i := range xs {` and `for i, x := range xs {`
+// (R0108) from the first name to the `:=`. Which Riddim loop it becomes
+// depends on what xs is, so there is no fix, and the declaration is dropped.
+func (p *parser) goRange(first, assign Token) {
+	d := p.report("R0108", Span{first.Pos, assign.End}, "Go's `range` loop: Riddim's `for` runs over a list, a map or a range, as in `for x in xs { }`")
+	d.Notes = append(d.Notes, "for an index, write `for (i, x) in xs.enumerate() { }`; over a map, `for (k, v) in m { }`; for a count, `for i in 0..n { }`")
+	panic(bailout{})
+}
+
+// moduleHabit reports a line that Go or Rust needs and Riddim does not
+// (R0125): Go's `package main` and `import`, Rust's `use path;`. It skips the
+// line, and for Go's imports returns the `use go` declarations the fix
+// writes. The token pre-scan reports the same line with modDiag.
+func (p *parser) moduleHabit() []Decl {
+	start, end := p.pos, stmtEnd(p.toks, p.pos)
+	d, uses := modDiag(p.fs, p.src, p.toks, start, end)
+	p.diags = append(p.diags, d)
+	for p.pos <= end {
+		p.next()
+	}
+	var decls []Decl
+	for _, u := range uses {
+		decls = append(decls, u)
+	}
+	return decls
+}
+
+// modDiag reports the Go or Rust module line in toks[start..end] (R0125).
+// For Go's imports it also returns the `use go` declarations that the fix
+// writes.
+func modDiag(fs *FileSet, src *Source, toks []Token, start, end int) (diag.Diagnostic, []*UseDecl) {
+	first, last := toks[start], toks[end]
+	sp := Span{first.Pos, last.End}
+	del := lineSpan(src, sp)
+	switch first.Text {
+	case "package":
+		d := fs.Diag("R0125", sp, "Riddim has no package clause: a program is the .rdm files of one directory")
+		d.Fixes = append(d.Fixes, fix("delete it", fs.Edit(del, "")))
+		return d, nil
+	case "import":
+		d := fs.Diag("R0125", sp, "`import` is Go: Riddim imports a Go package with `use go \"path\"`")
+		var uses []*UseDecl
+		var lines []string
+		ok := true
+		for i := start + 1; i <= end; i++ {
+			switch t := toks[i]; t.Kind {
+			case STRING:
+				uses = append(uses, &UseDecl{Use: first.Pos, Path: t.Text, PathSpan: t.Span()})
+				lines = append(lines, "use go "+strconv.Quote(t.Text))
+			case LPAREN, RPAREN, TERM:
+			default:
+				ok = false // a named, dot or blank import
+			}
+		}
+		if ok && len(lines) > 0 {
+			d.Fixes = append(d.Fixes, fix("write use go", fs.Edit(sp, strings.Join(lines, "\n"))))
+		} else {
+			d.Notes = append(d.Notes, "Riddim calls a Go package by its own name: `use go \"strings\"`, then `strings.Fields(s)`")
+		}
+		return d, uses
+	}
+	d := fs.Diag("R0125", sp, "Riddim has no modules: List, Map, Option, Result and the capabilities are built in, and `use` imports only Go packages, as in `use go \"strings\"`")
+	d.Fixes = append(d.Fixes, fix("delete it", fs.Edit(del, "")))
+	return d, nil
+}
+
+// stmtEnd returns the index of the last token of the statement that starts
+// at toks[i]: the one before the `;` or end of line outside braces.
+func stmtEnd(toks []Token, i int) int {
+	end, depth := i, 0
+	for ; toks[i].Kind != EOF; i++ {
+		switch toks[i].Kind {
+		case LBRACE:
+			depth++
+		case RBRACE:
+			if depth == 0 {
+				return end
+			}
+			depth--
+		case TERM:
+			if depth == 0 {
+				return end
+			}
+		}
+		end = i
+	}
+	return end
+}
+
+// lineSpan widens sp to its whole lines, with the line ending, when nothing
+// else is on them; otherwise it adds an explicit `;` and the blanks after sp.
+func lineSpan(src *Source, sp Span) Span {
+	b := src.Src
+	from, to := src.Offset(sp.Start), src.Offset(sp.End)
+	for to < len(b) && (b[to] == ' ' || b[to] == '\t') {
+		to++
+	}
+	if to < len(b) && b[to] == ';' {
+		to++
+		for to < len(b) && (b[to] == ' ' || b[to] == '\t') {
+			to++
+		}
+	}
+	lineStart := from
+	for lineStart > 0 && b[lineStart-1] != '\n' {
+		lineStart--
+	}
+	if strings.TrimSpace(string(b[lineStart:from])) != "" {
+		return Span{sp.Start, src.Pos(to)}
+	}
+	if to < len(b) && b[to] == '/' && to+1 < len(b) && b[to+1] == '/' {
+		for to < len(b) && b[to] != '\n' {
+			to++
+		}
+	}
+	switch {
+	case to == len(b):
+	case b[to] == '\r' && to+1 < len(b) && b[to+1] == '\n':
+		to += 2
+	case b[to] == '\n':
+		to++
+	default:
+		return Span{sp.Start, src.Pos(to)}
+	}
+	return Span{src.Pos(lineStart), src.Pos(to)}
+}
+
+// useGo parses `use go "path"`. A path written without quotes is reported
+// with a fix that adds them.
+func (p *parser) useGo() Decl {
+	use := p.expect(USE, "`use`")
+	p.expect(GO, "`go`")
+	t := p.tok
+	switch t.Kind {
+	case STRING:
+		p.next()
+		return &UseDecl{Use: use.Pos, Path: t.Text, PathSpan: t.Span()}
+	case IDENT:
+		path, end := t.Text, t.End
+		p.next()
+		for p.tok.Kind == SLASH && p.tok.Pos == end && p.peek().Kind == IDENT && p.peek().Pos == p.tok.End {
+			p.next()
+			path += "/" + p.tok.Text
+			end = p.tok.End
+			p.next()
+		}
+		sp := Span{t.Pos, end}
+		d := p.report("R0105", sp, "the package of `use go` is a string: write `use go %s`", strconv.Quote(path))
+		d.Fixes = append(d.Fixes, fix("quote it", p.fs.Edit(sp, strconv.Quote(path))))
+		return &UseDecl{Use: use.Pos, Path: path, PathSpan: sp}
+	}
+	p.unexpected("the package to import, as in `use go \"strings\"`")
+	return nil
 }
 
 // incrStmt parses Go's `x++` and `x--` as `x += 1` and `x -= 1` (R0123).
@@ -212,13 +370,14 @@ func (p *parser) refType() TypeExpr {
 		p.next()
 	}
 	inner := p.typ()
+	end := inner.Span().End
 	text := p.text(inner.Span())
 	if nt, ok := inner.(*NamedType); ok && nt.Name.Name == "str" && len(nt.Args) == 0 {
 		text = "String"
 		inner = &NamedType{Name: &Ident{NamePos: nt.Name.NamePos, Name: "String"}}
 	}
 	d := p.report("R0111", amp.Span(), "Riddim has no references: a parameter or field holds the value itself; write `%s`", text)
-	d.Fixes = append(d.Fixes, fix("use the value's type", p.fs.Edit(Span{amp.Pos, inner.Span().End}, text)))
+	d.Fixes = append(d.Fixes, fix("use the value's type", p.fs.Edit(Span{amp.Pos, end}, text)))
 	return inner
 }
 
@@ -232,21 +391,29 @@ func (p *parser) ptrType() TypeExpr {
 	return inner
 }
 
-// sliceType parses Go's `[]T` and Rust's `[T; N]` as List<T> (R0113).
+// sliceType parses Go's `[]T` and Rust's `[T; N]` and `[T]` as List<T>
+// (R0113).
 func (p *parser) sliceType() TypeExpr {
 	lb := p.tok
 	p.next()
 	var elem TypeExpr
 	var sp Span
 	msg := "`[]%s` is Go: Riddim's list type is `%s`"
-	if p.tok.Kind == RBRACK {
+	switch {
+	case p.tok.Kind == RBRACK:
 		p.next()
 		elem = p.typ()
 		sp = Span{lb.Pos, elem.Span().End}
-	} else {
+	default:
 		elem = p.typ()
+		if p.tok.Kind == RBRACK {
+			sp = Span{lb.Pos, p.tok.End}
+			p.next()
+			msg = "`[%s]` is a Rust slice: Riddim's list type is `%s`"
+			break
+		}
 		if p.tok.Kind != TERM || p.tok.Implicit {
-			p.unexpected("`;` in an array type")
+			p.unexpected("`;` or `]` in an array type")
 		}
 		for p.tok.Kind != RBRACK && p.tok.Kind != EOF {
 			p.next()
@@ -296,16 +463,24 @@ func (p *parser) turbofish() {
 	d.Fixes = append(d.Fixes, fix("delete the type arguments", p.fs.Edit(Span{start, end}, "")))
 }
 
-// A macroArg is an argument of a Rust macro call; name is set for `name = x`.
+// A macroArg is an argument of a Rust macro call: its source text, and for
+// a plain string literal its value. name is set for `name = x`, and text is
+// then the text of x.
 type macroArg struct {
-	name string
-	x    Expr
+	name   string
+	text   string
+	str    *string // the value of a plain string literal
+	interp bool    // a single interpolated string literal
 }
 
+// A sigParam is a parameter of the enclosing function whose type is a plain
+// name, as in `sys: Sys`: where a print macro's fix finds an Out to print
+// with.
+type sigParam struct{ name, typ string }
+
 // macro parses a Rust macro call: name!(...), name![...] or name!{...}.
-// Riddim has no macros. vec! is R0113; the others are R0115, with a fix
-// where Riddim has a plain equivalent: println! prints with an Out, format!
-// interpolates, panic! and todo! are functions.
+// Riddim has no macros: vec![...] is read as the list it stands for, and the
+// others as a MacroCall, which the checker types as what the fix leaves.
 func (p *parser) macro(id *Ident) Expr {
 	p.next() // !
 	open := p.tok
@@ -314,6 +489,7 @@ func (p *parser) macro(id *Ident) Expr {
 	saved := p.noStruct
 	p.noStruct = false
 	var args []macroArg
+	var exprs []Expr
 	repeat := false
 	for {
 		p.skipImplicit(closer)
@@ -326,8 +502,16 @@ func (p *parser) macro(id *Ident) Expr {
 			p.next()
 			p.next()
 		}
-		a.x = p.expr()
+		x := p.expr()
+		a.text = p.text(x.Span())
+		switch x := x.(type) {
+		case *StringLit:
+			a.str = &x.Value
+		case *InterpLit:
+			a.interp = true
+		}
 		args = append(args, a)
+		exprs = append(exprs, x)
 		p.skipImplicit(closer)
 		switch {
 		case p.tok.Kind == COMMA:
@@ -342,66 +526,84 @@ func (p *parser) macro(id *Ident) Expr {
 	end := p.tok.End
 	p.next()
 	p.noStruct = saved
-	sp := Span{id.NamePos, end}
-	exprs := make([]Expr, len(args))
-	for i, a := range args {
-		exprs[i] = a.x
+	var params []sigParam
+	for _, prm := range p.params {
+		if nt, ok := prm.Type.(*NamedType); ok && len(nt.Args) == 0 {
+			params = append(params, sigParam{prm.Name.Name, nt.Name.Name})
+		}
 	}
+	p.diags = append(p.diags, macroDiag(p.fs, id.Name, Span{id.NamePos, end}, open, args, repeat, params))
+	if id.Name == "vec" {
+		if repeat && len(exprs) > 0 {
+			exprs = exprs[:1] // vec![x; n]: a list of x
+		}
+		return &ListExpr{Lbrack: open.Pos, Elems: exprs, Rbrack: end - 1}
+	}
+	return &MacroCall{Name: id, Args: exprs, End: end}
+}
+
+// macroDiag reports a Rust macro call spanning sp: vec! is R0113, the others
+// R0115. The fix, where Riddim has a plain equivalent, writes it: println!
+// prints with an Out, format! interpolates, panic! and todo! are functions.
+func macroDiag(fs *FileSet, name string, sp Span, open Token, args []macroArg, repeat bool, params []sigParam) diag.Diagnostic {
 	replace := func(d *diag.Diagnostic, title, text string) {
-		d.Fixes = append(d.Fixes, fix(title, p.fs.Edit(sp, text)))
+		d.Fixes = append(d.Fixes, fix(title, fs.Edit(sp, text)))
 	}
-	switch name := id.Name; name {
+	switch name {
 	case "vec":
-		d := p.report("R0113", sp, "`vec![...]` is Rust: Riddim writes a list as `[...]`")
+		d := fs.Diag("R0113", sp, "`vec![...]` is Rust: Riddim writes a list as `[...]`")
 		switch {
 		case repeat:
 			d.Notes = append(d.Notes, "Riddim has no repeat literal: build the list in a loop with `push`")
 		case open.Kind == LBRACK:
-			d.Fixes = append(d.Fixes, fix("write a list", p.fs.Edit(Span{id.NamePos, open.Pos}, "")))
+			d.Fixes = append(d.Fixes, fix("write a list", fs.Edit(Span{sp.Start, open.Pos}, "")))
 		}
-		return &ListExpr{Lbrack: open.Pos, Elems: exprs, Rbrack: end - 1}
+		return d
 	case "println", "print", "eprintln", "eprint":
-		out, found := p.outFor(strings.HasPrefix(name, "e"))
+		out, found := outFor(params, strings.HasPrefix(name, "e"))
 		method := strings.TrimPrefix(name, "e")
-		d := p.report("R0115", sp, "Riddim has no macros: print with an Out capability, as in `%s.%s(\"n = ${n}\")`", out, method)
-		if text, ok := p.formatText(args); ok {
-			replace(d, "call "+method, out+"."+method+"("+text+")")
+		d := fs.Diag("R0115", sp, "Riddim has no macros: print with an Out capability, as in `%s.%s(\"n = ${n}\")`", out, method)
+		if text, ok := formatText(args); ok {
+			replace(&d, "call "+method, out+"."+method+"("+text+")")
 		}
 		if !found {
 			d.Notes = append(d.Notes, "printing needs the Out capability: main takes `sys: Sys`; pass `sys.out` on to the functions that print")
 		}
+		return d
 	case "format":
-		d := p.report("R0115", sp, "Riddim has no macros: build text with interpolation, as in \"n = ${n}\"")
-		if text, ok := p.formatText(args); ok && len(args) > 0 {
-			replace(d, "interpolate", text)
+		d := fs.Diag("R0115", sp, "Riddim has no macros: build text with interpolation, as in \"n = ${n}\"")
+		if text, ok := formatText(args); ok && len(args) > 0 {
+			replace(&d, "interpolate", text)
 		}
+		return d
 	case "panic", "unreachable":
-		d := p.report("R0115", sp, "Riddim has no macros: `panic(msg)` is a function")
+		d := fs.Diag("R0115", sp, "Riddim has no macros: `panic(msg)` is a function")
 		text, ok := `"explicit panic"`, true
 		if name == "unreachable" {
 			text = `"unreachable"`
 		}
 		if len(args) > 0 {
-			text, ok = p.formatText(args)
+			text, ok = formatText(args)
 		}
 		if ok {
-			replace(d, "call panic", "panic("+text+")")
+			replace(&d, "call panic", "panic("+text+")")
 		}
+		return d
 	case "todo", "unimplemented":
-		d := p.report("R0115", sp, "Riddim has no macros: `todo()` is a function, and takes no message")
-		replace(d, "call todo", "todo()")
-	default:
-		d := p.report("R0115", sp, "Riddim has no macros, and `%s!` has no Riddim form", name)
-		switch name {
-		case "assert", "assert_eq", "assert_ne", "debug_assert":
-			d.Notes = append(d.Notes, "check the condition with `if` and call `panic(\"...\")`")
-		case "matches":
-			d.Notes = append(d.Notes, "test a pattern with `if let p = x { true } else { false }`")
-		case "write", "writeln", "dbg":
-			d.Notes = append(d.Notes, "print with an Out capability's `print` or `println`")
-		}
+		d := fs.Diag("R0115", sp, "Riddim has no macros: `todo()` is a function, and takes no message")
+		replace(&d, "call todo", "todo()")
+		return d
 	}
-	return &CallExpr{Fun: id, Args: exprs, Rparen: end - 1}
+	d := fs.Diag("R0115", sp, "Riddim has no macros, and `%s!` has no Riddim form", name)
+	switch name {
+	case "assert", "assert_eq", "assert_ne", "debug_assert":
+		d.Notes = append(d.Notes, "check the condition with `if` and call `panic(\"...\")`")
+	case "matches":
+		d.Notes = append(d.Notes, "test a pattern with `if let p = x { true } else { false }`")
+	case "write", "writeln", "dbg":
+		d.Notes = append(d.Notes, "print with an Out capability's `print` or `println`")
+	}
+	return d
 }
 
 // skipImplicit skips the newlines inside a macro's braces.
@@ -414,19 +616,17 @@ func (p *parser) skipImplicit(closer Kind) {
 // outFor returns the Out capability a print macro's fix should print with:
 // a Sys or Out parameter of the enclosing function, or else sys.out (sys.err
 // for eprint!), reporting whether it found one.
-func (p *parser) outFor(stderr bool) (string, bool) {
+func outFor(params []sigParam, stderr bool) (string, bool) {
 	field := "out"
 	if stderr {
 		field = "err"
 	}
-	for _, prm := range p.params {
-		if nt, ok := prm.Type.(*NamedType); ok && len(nt.Args) == 0 {
-			switch {
-			case nt.Name.Name == "Sys":
-				return prm.Name.Name + "." + field, true
-			case nt.Name.Name == "Out" && !stderr:
-				return prm.Name.Name, true
-			}
+	for _, prm := range params {
+		switch {
+		case prm.typ == "Sys":
+			return prm.name + "." + field, true
+		case prm.typ == "Out" && !stderr:
+			return prm.name, true
 		}
 	}
 	return "sys." + field, false
@@ -435,28 +635,28 @@ func (p *parser) outFor(stderr bool) (string, bool) {
 // formatText turns a macro's format string and arguments into a Riddim
 // string: println!("{} is {}", a, b) prints "${a} is ${b}". No arguments
 // give "".
-func (p *parser) formatText(args []macroArg) (string, bool) {
+func formatText(args []macroArg) (string, bool) {
 	if len(args) == 0 {
 		return `""`, true
 	}
-	switch first := args[0].x.(type) {
-	case *InterpLit:
-		return p.text(first.Span()), len(args) == 1
-	case *StringLit:
+	first := args[0]
+	switch {
+	case first.interp:
+		return first.text, len(args) == 1
+	case first.str != nil:
 		var pos []string
 		named := map[string]string{}
 		for _, a := range args[1:] {
-			text := p.text(a.x.Span())
-			if strings.ContainsAny(text, "\n\r") {
+			if strings.ContainsAny(a.text, "\n\r") {
 				return "", false
 			}
 			if a.name != "" {
-				named[a.name] = text
+				named[a.name] = a.text
 			} else {
-				pos = append(pos, text)
+				pos = append(pos, a.text)
 			}
 		}
-		return rustFormat(first.Value, pos, named)
+		return rustFormat(*first.str, pos, named)
 	}
 	return "", false
 }

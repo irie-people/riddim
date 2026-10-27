@@ -124,11 +124,18 @@ func (c *checker) warnf(code string, sp syntax.Span, format string, args ...any)
 	c.warns = append(c.warns, c.fset.Diag(code, sp, format, args...))
 }
 
+// result returns the errors of the names-and-types stage, or, when there
+// are none but the Rust and Go habits, which do not stop the stages after
+// theirs, those of the patterns stage too. Unused bindings wait until there
+// are no errors at all.
 func (c *checker) result() []diag.Diagnostic {
 	var out []diag.Diagnostic
-	if diag.HasErrors(c.errs) {
+	switch {
+	case diag.HasBlocking(c.errs):
 		out = append(append(out, c.errs...), c.warns...)
-	} else {
+	case len(c.errs) > 0:
+		out = append(append(append(out, c.errs...), c.pats...), c.warns...)
+	default:
 		out = append(append(append(out, c.pats...), c.warns...), c.unused...)
 	}
 	diag.Sort(out)
@@ -212,6 +219,8 @@ func (c *checker) collect(files []*syntax.File) {
 				k.Type = c.resolveType(d.Type)
 			case *syntax.ImplDecl:
 				c.impls = append(c.impls, implInfo{decl: d})
+			case *syntax.UseDecl:
+				c.errorf("R0106", d.Span(), "`use go` is not supported in this version")
 			}
 		}
 	}
@@ -526,7 +535,8 @@ func (c *checker) resolveNamed(t *syntax.NamedType) Type {
 		}
 		return &Result{args[0], args[1]}
 	case "Env", "Fs", "Clock":
-		return invalid // the parser reported R0106
+		c.errorf("R0106", t.Name.Span(), "`%s` is not supported in this version", name)
+		return invalid
 	case "Self":
 		if c.selfType == nil {
 			c.errorf("R0201", t.Name.Span(), "`Self` is only available inside an impl block")
