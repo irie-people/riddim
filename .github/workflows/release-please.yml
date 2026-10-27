@@ -1,0 +1,20 @@
+# release-please keeps a pull request open with the next version and CHANGELOG.md, worked out from the
+# Conventional Commits since the last release; merging it tags vX.Y.Z and publishes a GitHub release.
+# It runs on the built-in GITHUB_TOKEN only. Allow that token to open pull requests (Settings > Actions >
+# General > Workflow permissions). Pull requests it opens start no other workflows, so `commits` doesn't
+# run on them: their titles are conventional already.
+name: release-please
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

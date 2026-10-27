@@ -1,0 +1,27 @@
+# Conventional Commits for the pull request title and every commit in the pull request, the same
+# check .github/conventional-commit.sh runs as the commit-msg hook. release-please reads them to
+# pick the next version and write CHANGELOG.md.
+name: commits
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+permissions:
+  contents: read
+jobs:
+  conventional:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Title
+        env: { TITLE: "${{ github.event.pull_request.title }}" }
+        run: sh .github/conventional-commit.sh --title "$TITLE"
+      - name: Commits
+        if: ${{ !cancelled() }}
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          bad=0
+          for c in $(git rev-list --reverse "$BASE..$HEAD"); do sh .github/conventional-commit.sh --rev "$c" || bad=1; done
+          exit $bad

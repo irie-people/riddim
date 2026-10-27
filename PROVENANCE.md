@@ -48,6 +48,8 @@ Riddim is written from public documentation and public open-source projects. Eve
 | 2026-10-27 | `go doc crypto/sha256`, `go doc os/exec.LookPath`, `go doc path/filepath.EvalSymlinks`, `go doc os.FileInfo` (`ModTime`); `go help environment`; Go source, `$GOROOT/src/cmd/go/internal/work/shell.go` (`go build -o` overwrites only an object file) | `riddim build` skips go build when a stamp of the generated Go, the output path, the go command and the variables that change its output matches the last build, and the binary has its recorded size and time (`internal/driver/build.go`) |
 | 2026-10-27 | `go help cache`, `go help packages` | The runtime moves into its own package of the generated module, `rt`, whose compiled form Go's build cache keeps and reuses across programs; the run tests build every program against one copy (`internal/emit`, `internal/driver`) |
 | 2026-10-27 | `go doc encoding/json.Encoder.SetEscapeHTML`, `go doc encoding/json.Encoder.Encode` | `riddim check --json` writes strings without HTML escaping, so a fix's `=>` is not sent as `>`; Encode's trailing newline is trimmed to keep one diagnostic per line (`internal/diag`) |
+| 2026-10-27 | https://www.conventionalcommits.org/en/v1.0.0/ (CC BY 3.0) | The commit subject rule in AGENTS.md, which `.github/conventional-commit.sh` checks |
+| 2026-10-27 | https://github.com/googleapis/release-please (docs/manifest-releaser.md, docs/customizing.md, schemas/config.json, src/updaters/generic.ts) ; https://github.com/googleapis/release-please-action (README) | `release-please-config.json` (the `go` release type, `initial-version`, tags without a component); the `x-release-please-version` annotation on `Version`, whose whole `0.0.0-m4` the generic updater replaces; the manifest at 0.0.0, so the first release is 0.1.0 |
 
 ### Ideas from prior knowledge
 
@@ -68,3 +70,6 @@ These shaped the design but were not re-read for it. A build session that relies
 
 | Module | Version | License | Why |
 |---|---|---|---|
+| Steak framework templates (https://github.com/steak-hq/steak, `templates/project`) | 0.2.0 | MIT | Copied: `.github/conventional-commit.sh`, `.github/workflows/commits.yml` and `.github/workflows/release-please.yml` |
+| googleapis/release-please-action | v4 | Apache-2.0 | Run by `release-please.yml` on GitHub's runners; nothing copied |
+| actions/checkout | v4 | MIT | Run by `commits.yml` on GitHub's runners; nothing copied |
