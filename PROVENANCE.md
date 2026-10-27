@@ -13,6 +13,8 @@ Riddim is written from public documentation and public open-source projects. Eve
 | 2026-10-27 | https://github.com/google/capslock ; https://capslock-project.github.io/ | Capability classes for Go packages (files, network, exec, environment) and the `analyzer` library: the plan for checking Go dependencies (DESIGN §5.3) |
 | 2026-10-27 | https://go.dev/doc/go1.27 | Methods may declare their own type parameters, but cannot implement interface methods: lowering of generic methods (DESIGN §6) |
 | 2026-10-27 | https://www.apache.org/licenses/LICENSE-2.0.txt | License text (LICENSE) |
+| 2026-10-27 | Go standard library: `go doc encoding/json.Marshal`; `$GOROOT/src/encoding/json/encode.go` (fields sorted by index) | Diagnostics JSON keys come from struct tags in struct order, so `internal/diag` keeps the field order of DESIGN §7.1 |
+| 2026-10-27 | Go standard library: `go doc unicode/utf8` (`RuneCount`, `DecodeRune`) | Columns counted in code points and invalid UTF-8 detection in the lexer (`internal/syntax`, `internal/diag`) |
 
 ### Ideas from prior knowledge
 

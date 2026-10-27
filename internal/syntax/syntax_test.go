@@ -1,0 +1,219 @@
+package syntax
+
+import (
+	"strings"
+	"testing"
+)
+
+// tokens renders the token stream compactly: TERM as `;`, identifiers and
+// literals by their text.
+func tokens(t *testing.T, src string) (string, []string) {
+	t.Helper()
+	fs := NewFileSet()
+	toks, diags := Lex(fs, fs.Add("t.rdm", []byte(src)))
+	var parts []string
+	for _, tok := range toks {
+		switch tok.Kind {
+		case EOF:
+		case TERM:
+			parts = append(parts, ";")
+		case IDENT, INT, FLOAT:
+			parts = append(parts, tok.Text)
+		case STRING:
+			parts = append(parts, `"`+tok.Text+`"`)
+		default:
+			parts = append(parts, tok.Kind.String())
+		}
+	}
+	var codes []string
+	for _, d := range diags {
+		codes = append(codes, d.Code)
+	}
+	return strings.Join(parts, " "), codes
+}
+
+func TestNewlineRules(t *testing.T) {
+	tests := []struct{ src, want string }{
+		{"let x = 1\nlet y = 2\n", "let x = 1 ; let y = 2 ;"},
+		{"let x = 1; let y = 2", "let x = 1 ; let y = 2 ;"},
+		// newlines inside ( ) and [ ] are ignored
+		{"f(a,\n  b)\n", "f ( a , b ) ;"},
+		{"[1,\n2\n]\n", "[ 1 , 2 ] ;"},
+		// a line ending in an operator continues
+		{"let x = a +\n  b\n", "let x = a + b ;"},
+		// a line starting with `.`, `&&`, `||`, `|`, `=>`, `else` or a binary operator continues
+		{"xs\n  .map(f)\n  .len()\n", "xs . map ( f ) . len ( ) ;"},
+		{"a\n  && b\n  || c\n", "a && b || c ;"},
+		{"a\n  + b\n  * c\n  == d\n", "a + b * c == d ;"},
+		{"if c {\n} else {\n}\n", "if c { } else { } ;"},
+		{"if c {\n}\nelse {\n}\n", "if c { } else { } ;"},
+		{"match x {\n  A\n  | B => 1\n}\n", "match x { A | B => 1 ; } ;"},
+		// but not `-`
+		{"a\n-b\n", "a ; - b ;"},
+		// nor after return, break or continue
+		{"return\n.5\n", "return ; . 5 ;"},
+		{"break\n+ 1\n", "break ; + 1 ;"},
+		// braces: newlines separate statements and list items
+		{"Point {\n  x: 1.0\n  y: 2.0\n}\n", "Point { x : 1.0 ; y : 2.0 ; } ;"},
+		{"f(|x| {\n  let y = x\n  y\n})\n", "f ( | x | { let y = x ; y ; } ) ;"},
+		// tokens that cannot end a statement
+		{"let x =\n  1\n", "let x = 1 ;"},
+		{"fn f() -> Int {\n  1\n}", "fn f ( ) -> Int { 1 ; } ;"},
+		// comments
+		{"a // one\n/// doc\nb\n", "a ; b ;"},
+		// tuple fields
+		{"t.0.1\n", "t . 0 . 1 ;"},
+		{"1..10 1..=2 3.5 1e9 0xff 1_000", "1 .. 10 1 ..= 2 3.5 1e9 0xff 1_000 ;"},
+		{`"a\n\t\"\\\$\u{48}"`, "\"a\n\t\"\\$H\" ;"},
+		{"a -> b => c :: d", "a -> b => c :: d ;"},
+	}
+	for _, tt := range tests {
+		got, codes := tokens(t, tt.src)
+		if got != tt.want || len(codes) != 0 {
+			t.Errorf("Lex(%q)\n got  %s %v\n want %s", tt.src, got, codes, tt.want)
+		}
+	}
+}
+
+func TestLexErrors(t *testing.T) {
+	tests := []struct{ src, code string }{
+		{"let x = &y", "R0101"},
+		{"let c = 'a'", "R0101"},
+		{"let s = \"abc\n", "R0102"},
+		{`"\q"`, "R0103"},
+		{`"\u{110000}"`, "R0103"},
+		{"1__0", "R0104"},
+		{"12abc", "R0104"},
+		{"0x", "R0104"},
+		{`"n = ${n}"`, "R0106"},
+	}
+	for _, tt := range tests {
+		_, codes := tokens(t, tt.src)
+		if len(codes) != 1 || codes[0] != tt.code {
+			t.Errorf("Lex(%q) codes = %v, want [%s]", tt.src, codes, tt.code)
+		}
+	}
+}
+
+func parse(t *testing.T, src string) (*File, []string) {
+	t.Helper()
+	fs := NewFileSet()
+	f, diags := Parse(fs, fs.Add("t.rdm", []byte(src)))
+	var codes []string
+	for _, d := range diags {
+		codes = append(codes, d.Code)
+	}
+	return f, codes
+}
+
+func TestParse(t *testing.T) {
+	src := `
+const MAX: Int = 3
+
+/// A point.
+struct Point {
+    x: Float,
+    y: Float,
+}
+
+enum Shape {
+    Circle(radius: Float),
+    Rect(Float, Float)
+    Empty,
+}
+
+impl<T> Stack<T> {
+    fn push(self, x: T) -> Stack<T> {
+        Stack { items: self.items.push(x) }
+    }
+    fn map<U>(self, f: fn(T) -> U) -> Stack<U> {
+        Stack { items: self.items.map(f), ..self }
+    }
+}
+
+fn main(sys: Sys) -> Result<(), Error> {
+    let mut n = 0
+    let (a, b) = (1, "x")
+    let xs: List<Int> = [1, 2, 3]
+    for x in xs {
+        n += x
+    }
+    for i in 0..=10 { n = n - i }
+    while n > 0 && true { n -= 1 }
+    let r = match parse(a) {
+        Ok(Some(v)) if v > 0 => v,
+        Ok(None) | Err(_) => -1
+        _ => 0,
+    }
+    let f = |x: Int| -> Int { x + 1 }
+    let g = || 1
+    let s = if a == 1 { "one" } else if a == 2 { "two" } else { "many" }
+    sys.out.println(s)
+    loop {
+        if n > 3 { break }
+        n += 1
+        continue
+    }
+    Ok(())
+}
+`
+	f, codes := parse(t, src)
+	if len(codes) != 0 {
+		t.Fatalf("unexpected diagnostics %v", codes)
+	}
+	if len(f.Decls) != 5 {
+		t.Fatalf("got %d declarations, want 5", len(f.Decls))
+	}
+	e := f.Decls[2].(*EnumDecl)
+	if len(e.Variants) != 3 || e.Variants[0].Fields[0].Name.Name != "radius" || e.Variants[1].Fields[0].Name != nil {
+		t.Errorf("enum variants parsed wrong: %+v", e.Variants)
+	}
+	main := f.Decls[4].(*FuncDecl)
+	if got := len(main.Body.Stmts); got != 13 {
+		t.Errorf("main has %d statements, want 13", got)
+	}
+}
+
+func TestParseErrors(t *testing.T) {
+	tests := []struct {
+		src   string
+		codes string
+	}{
+		{"fn f() { let x }", "R0105"},
+		{"fn f() { x = }", "R0105"},
+		{"fn f() { break }", "R0107"},
+		{"fn f() { loop { xs.map(|x| { continue }) } }", "R0107"},
+		{"fn f() -> Int { 1 as Float }", "R0106"},
+		{"fn f() { if let Some(x) = y { } }", "R0106"},
+		{"use go \"strings\"", "R0106"},
+		{"fn f(m: Map<String, Int>) { }", "R0106"},
+		{"fn f() { a < b < c }", "R0105"},
+		{"fn f(x) { }", "R0105"},
+		{"struct P(Int)", "R0105"},
+		{"fn f() { foo::<Int>() }", "R0105"},
+		// one error per declaration: recovery finds the next one
+		{"fn f() { ) }\nfn g() { ] }\nfn h() { }", "R0105 R0105"},
+	}
+	for _, tt := range tests {
+		_, codes := parse(t, tt.src)
+		if got := strings.Join(codes, " "); got != tt.codes {
+			t.Errorf("Parse(%q) codes = %q, want %q", tt.src, got, tt.codes)
+		}
+	}
+}
+
+func TestPositions(t *testing.T) {
+	fs := NewFileSet()
+	a := fs.Add("a.rdm", []byte("ab\ncdé f\n"))
+	b := fs.Add("b.rdm", []byte("x"))
+	if got := fs.Source(b.Pos(0)); got != b {
+		t.Errorf("Source(b) = %s", got.Name)
+	}
+	line, col := a.LineCol(a.Pos(8)) // after "cdé " (é is two bytes)
+	if line != 2 || col != 5 {
+		t.Errorf("LineCol = %d:%d, want 2:5", line, col)
+	}
+	if s, _ := a.Line(2); s != "cdé f" {
+		t.Errorf("Line(2) = %q", s)
+	}
+}
