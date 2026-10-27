@@ -44,6 +44,7 @@ Riddim is written from public documentation and public open-source projects. Eve
 | 2026-10-27 | `go doc strings`, `go doc strconv`, `go doc math`, `go doc unicode`, `go doc unicode/utf8` (and a listing of their exports with go/types) | The allow list of DESIGN §5.3 and which of its functions and constants map (about 190); the tests' examples: `utf8.EncodeRune` writes into its argument, which shows that lists are copied; `strconv.ParseInt` (int64) and `strings.Cut` (three results) are refused |
 | 2026-10-27 | `go doc slices.Clone` | `listCopy`, which copies a list on its way into or out of Go (`internal/emit/riddim_rt.go.txt`) |
 | 2026-10-27 | `go doc testing.T.Setenv`, `go doc testing.T.Chdir` | The M3 check `TestRunFiles`, which runs `riddim run examples/files` with the journal's author in the environment (`cmd/riddim/main_test.go`) |
+| 2026-10-27 | `go doc testing.B.Loop`; `go help build` (`-race`); Go source, `$GOROOT/src/cmd/go/internal/work/init.go` (the `race` tool tag) | The M4 speed check: a benchmark of `riddim check` on a generated 10,000-line program, and a test that times the `riddim` command on it and skips under `-race`, which builds with the `race` tag (`internal/gen`, `cmd/riddim/speed_test.go`) |
 | 2026-10-27 | `go doc encoding/json.Encoder.SetEscapeHTML`, `go doc encoding/json.Encoder.Encode` | `riddim check --json` writes strings without HTML escaping, so a fix's `=>` is not sent as `>`; Encode's trailing newline is trimmed to keep one diagnostic per line (`internal/diag`) |
 
 ### Ideas from prior knowledge
