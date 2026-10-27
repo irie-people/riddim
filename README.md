@@ -49,7 +49,7 @@ Early and unreleased. Nothing to install yet. The plan is [docs/DESIGN.md](docs/
 after running costs, in proportion to the value of what they contributed. The
 founder started with zero Steak and earns it the same way as everyone else. The
 record is public: [riddim-hq/stake](https://github.com/riddim-hq/stake). It runs on
-[Steak](https://github.com/steak-hq/steak) v0.1.0.
+[Steak](https://github.com/steak-hq/steak) v0.2.0.
 
 ## License
 
