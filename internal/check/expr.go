@@ -628,7 +628,7 @@ var methodAliases = map[string]string{
 	"length": "len", "size": "len", "count": "len",
 	"append": "push", "add": "push",
 	"unwrap_or_default": "unwrap_or",
-	"to_str": "to_string", "as_str": "to_string",
+	"to_str":            "to_string", "as_str": "to_string",
 }
 
 func (c *checker) field(e *syntax.FieldExpr) Type {
