@@ -4,8 +4,12 @@ use go "time"
 use go "net/http"
 use go "example.com/lib"
 use go "sort"
+use go "math/rand/v2"
 use go "strings"
 
 fn main() {
     let _ = strings.TrimSpace(" a ")
+    let text = os.ReadFile("a.txt")
+    fmt.Println(text)
+    let _ = rand.IntN(6) + http.StatusOK
 }

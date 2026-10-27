@@ -18,7 +18,9 @@ import (
 // of the same name hides it. Only functions and constants whose types map to
 // Riddim's can be used.
 
-// A GoPkg is a Go package imported with `use go`.
+// A GoPkg is a Go package imported with `use go`. Pkg is nil for a package
+// that was refused: its name is still declared, so that its uses report
+// nothing more.
 type GoPkg struct {
 	Name  string
 	Path  string
@@ -72,30 +74,56 @@ func (c *checker) collectUses(files []*syntax.File) {
 				continue
 			}
 			byPath[u.Path] = true
+			var p *types.Package
 			if !gointerop.Allowed(u.Path) {
 				d := c.errorf("R0601", u.PathSpan, "%s", gointerop.Refusal(u.Path))
 				d.Notes = append(d.Notes, "`use go` allows "+gointerop.AllowedList()+", which cannot reach outside the program")
-				continue
-			}
-			p, err := goImport(u.Path)
-			if err != nil {
+			} else if pkg, err := goImport(u.Path); err != nil {
 				d := c.errorf("R0601", u.PathSpan, "%v", err)
 				d.Notes = append(d.Notes, "Riddim reads the packages of `use go` from the Go installation that `go env GOROOT` names")
+			} else {
+				p = pkg
+			}
+			name := pathName(u.Path)
+			if p != nil {
+				name = p.Name()
+			}
+			if name == "" {
 				continue
 			}
 			// The name, inside the quotes of the path: "unicode/utf8" names utf8.
 			pos := u.PathSpan.Start + 1
-			if strings.HasSuffix(u.Path, p.Name()) {
-				pos += syntax.Pos(len(u.Path) - len(p.Name()))
+			if i := strings.LastIndex(u.Path, name); i >= 0 {
+				pos += syntax.Pos(i)
 			}
-			gp := &GoPkg{Name: p.Name(), Path: u.Path, Pkg: p, Ident: &syntax.Ident{NamePos: pos, Name: p.Name()}}
+			gp := &GoPkg{Name: name, Path: u.Path, Pkg: p, Ident: &syntax.Ident{NamePos: pos, Name: name}}
 			if prev := c.globals[gp.Name]; prev != nil {
+				if p == nil {
+					continue
+				}
 				c.errorf("R0202", gp.Ident.Span(), "the Go package `%s` has the name of the declaration at %s; rename the declaration", gp.Name, c.where(declIdent(prev)))
 				continue
 			}
 			c.declareGlobal(gp.Ident, gp)
 		}
 	}
+}
+
+// pathName returns the name a Go package of path usually has: its last
+// element, or the one before a major version such as v2. It is "" when that
+// is not a name.
+func pathName(path string) string {
+	parts := strings.Split(path, "/")
+	name := parts[len(parts)-1]
+	if len(parts) > 1 && len(name) > 1 && name[0] == 'v' && strings.Trim(name[1:], "0123456789") == "" {
+		name = parts[len(parts)-2]
+	}
+	for i, r := range name {
+		if !(r == '_' || 'a' <= r && r <= 'z' || 'A' <= r && r <= 'Z' || i > 0 && '0' <= r && r <= '9') {
+			return ""
+		}
+	}
+	return name
 }
 
 // goPkg returns the Go package that x names, if x is a name that no local
@@ -141,6 +169,9 @@ func (c *checker) goCall(e *syntax.MethodCallExpr, gp *GoPkg, want Type) Type {
 		}
 		return invalid
 	}
+	if gp.Pkg == nil {
+		return fail() // refused: reported at its `use go`
+	}
 	obj := c.goObject(gp, e.Name)
 	if obj == nil {
 		return fail()
@@ -165,6 +196,9 @@ func (c *checker) goCall(e *syntax.MethodCallExpr, gp *GoPkg, want Type) Type {
 // goMember checks a Go package's member that is not called: a constant,
 // `math.Pi`, or a function used as a value, `xs.map(strings.ToUpper)`.
 func (c *checker) goMember(e *syntax.FieldExpr, gp *GoPkg) Type {
+	if gp.Pkg == nil {
+		return invalid // refused: reported at its `use go`
+	}
 	obj := c.goObject(gp, e.Name)
 	if obj == nil {
 		return invalid
