@@ -80,7 +80,10 @@ func Sort(ds []Diagnostic) {
 		if a.Col != b.Col {
 			return a.Col < b.Col
 		}
-		return a.Code < b.Code
+		if a.Code != b.Code {
+			return a.Code < b.Code
+		}
+		return a.Message < b.Message
 	})
 }
 

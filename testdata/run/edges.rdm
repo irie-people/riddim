@@ -1,0 +1,85 @@
+// Paths of the lowering that need statements in unusual places.
+
+enum Void {}
+
+enum Maybe {
+    Some(Int),
+    Nothing,
+}
+
+struct Point {
+    x: Int,
+    y: Int,
+}
+
+impl Point {
+    fn map<U>(self, f: fn(Int) -> U) -> (U, U) {
+        (f(self.x), f(self.y))
+    }
+}
+
+fn first_big(xs: List<Int>) -> Result<Int, Error> {
+    let r = match xs.len() {
+        n if n > "2".parse_int()? => 1,
+        n if n > 0 => 2,
+        _ => 3,
+    }
+    Ok(r)
+}
+
+fn count_positive(xs: List<String>) -> Result<Int, Error> {
+    let mut i = 0
+    while i < xs.len() && xs[i].parse_int()? > 0 {
+        i += 1
+    }
+    Ok(i)
+}
+
+fn pick(o: Option<Result<Int, Int>>) -> Int {
+    match o {
+        Some(Ok(n) | Err(n)) if n > 100 => 100,
+        Some(Ok(n) | Err(n)) => n,
+        None => 0,
+    }
+}
+
+fn both(p: (Option<Int>, Option<Int>)) -> Int {
+    match p {
+        (Some(a), Some(_)) | (Some(a), None) | (None, Some(a)) => a,
+        (None, None) => -1,
+    }
+}
+
+fn loud(sys: Sys, s: String) -> Bool {
+    sys.out.println(s)
+    true
+}
+
+fn never_empty(v: Void) -> Int {
+    match v {}
+}
+
+fn main(sys: Sys) -> Result<(), Error> {
+    sys.out.println(first_big([1, 2, 3])?.to_string() + first_big([1])?.to_string() + first_big([])?.to_string())
+    sys.out.println(count_positive(["3", "1", "0", "5"])?.to_string())
+    sys.out.println(pick(Some(Ok(4))).to_string() + " " + pick(Some(Err(7))).to_string() + " " + pick(Some(Err(500))).to_string() + " " + pick(None).to_string())
+    sys.out.println(both((Some(1), Some(2))).to_string() + " " + both((None, Some(5))).to_string() + " " + both((None, None)).to_string())
+    let m = Maybe::Some(3)
+    let n = match m {
+        Some(x) => x,
+        Nothing => 0,
+    }
+    sys.out.println(n.to_string())
+    let q = Point { x: 2, y: 5 }.map(|v| v * 10)
+    sys.out.println(q.0.to_string() + " " + q.1.to_string())
+    let (_, _) = (loud(sys, "pair evaluated"), 1)
+    for (_, _) in [(1, 2)] {
+        sys.out.println("looped")
+    }
+    let ok = loud(sys, "left") || loud(sys, "never")
+    sys.out.println(ok.to_string())
+    let t = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+    sys.out.println(t.9.to_string())
+    let _ = never_empty
+    Ok(())
+}

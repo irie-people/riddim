@@ -331,6 +331,10 @@ func (f *fn) let(s *syntax.LetStmt) {
 		}
 		f.unused(l, name)
 	case *syntax.TuplePat:
+		if !bindsNames(p) {
+			f.into(s.Value, discard)
+			return
+		}
 		v := f.expr(s.Value)
 		if v.never || f.terminated {
 			return
@@ -468,7 +472,11 @@ func (f *fn) while(x *syntax.WhileExpr) {
 			f.terminated = true
 			return
 		}
-		f.printf("if !(%s) {\nbreak\n}\n", c.s)
+		if c.op {
+			f.printf("if !(%s) {\nbreak\n}\n", c.s)
+		} else {
+			f.printf("if !%s {\nbreak\n}\n", c.s)
+		}
 	}
 	f.loopBody(x.Body)
 	f.printf("}\n")
@@ -522,6 +530,10 @@ func (f *fn) forLoop(x *syntax.ForExpr) {
 			f.printf("for range %s {\n", it.s)
 		}
 	case *syntax.TuplePat:
+		if !bindsNames(p) {
+			f.printf("for range %s {\n", it.s)
+			break
+		}
 		tmp := f.temp("item")
 		f.printf("for _, %s := range %s {\n", tmp, it.s)
 		f.destructure(p, tmp)

@@ -139,6 +139,11 @@ func ctorsOf(t Type) []*ctor {
 	return nil
 }
 
+func isEmptyEnum(t Type) bool {
+	n, ok := Resolve(t).(*Named)
+	return ok && n.Decl.IsEnum && len(n.Decl.Variants) == 0
+}
+
 func fieldTypes(t Type, k *ctor) []Type {
 	switch t := Resolve(t).(type) {
 	case *Option:
@@ -282,6 +287,9 @@ func (x *exh) missing(rows [][]*xpat, tys []Type, top bool) [][]*xpat {
 	}
 	rows = expandOr(rows)
 	t := tys[0]
+	if isEmptyEnum(t) {
+		return nil // no values, so nothing is missing
+	}
 	ctors := ctorsOf(t)
 	used := headKeys(rows)
 	if complete(ctors, used) {

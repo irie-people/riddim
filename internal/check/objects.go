@@ -108,9 +108,9 @@ func (f *FuncObj) Sig() *Func { return &Func{Params: f.Params, Result: f.Result}
 
 // A ConstObj is a const declaration.
 type ConstObj struct {
-	Name  string
-	Decl  *syntax.ConstDecl
-	Type  Type
+	Name   string
+	Decl   *syntax.ConstDecl
+	Type   Type
 	Value  *Const
 	state  int // 0 unchecked, 1 checking, 2 done
 	cyclic bool

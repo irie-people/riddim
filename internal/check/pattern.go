@@ -2,6 +2,7 @@ package check
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/riddim-hq/riddim/internal/syntax"
 )
@@ -49,7 +50,12 @@ func (c *checker) pat(p syntax.Pattern, t Type, b *binder) {
 		for _, alt := range p.Alts[1:] {
 			side := &binder{mut: b.mut, reuse: names, seen: map[string]bool{}}
 			c.pat(alt, t, side)
+			missing := make([]string, 0, len(names))
 			for name := range names {
+				missing = append(missing, name)
+			}
+			sort.Strings(missing)
+			for _, name := range missing {
 				if !side.seen[name] {
 					c.errorf("R0403", alt.Span(), "`%s` is bound on only one side of `|`: each side must bind the same names", name)
 				}
