@@ -16,6 +16,8 @@ Nothing in the repository should identify a person: no names, usernames, emails,
 
 Commit in UTC: `TZ=UTC git commit`. Sign off every commit (`git commit -s`, the DCO).
 
+Write every commit subject and pull request title as a [Conventional Commit](https://www.conventionalcommits.org/en/v1.0.0/): `type(scope): description`. `type` is one of `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`, in lower case; the scope is optional; a `!` before the colon marks a breaking change. The commit-msg hook and the `commits` workflow refuse anything else and print the nearest subject that passes (`sh .github/conventional-commit.sh --title "<subject>"` checks one first); a merge keeps whatever message it has. release-please makes the next version and CHANGELOG.md from these commits, so a change never edits `Version` in `cmd/riddim/main.go` or CHANGELOG.md; a release is a commit of its own.
+
 ## Stake
 
 Contributions earn Steak under [riddim-hq/stake](https://github.com/riddim-hq/stake). Agree anything sizeable in an issue first, and say when an agent wrote part of a change.
