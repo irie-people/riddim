@@ -2,11 +2,11 @@
 
 Every diagnostic has a stable code, an exact span and, where it can, a fix that applies mechanically. `riddim check --json` prints them as data (DESIGN §7.1); `riddim check` prints the same as text. Codes starting with R are errors; codes starting with W are warnings, which do not stop a build.
 
-The compiler stops after the first stage that reports errors: syntax (R01xx), then names and types (R02xx, R03xx, R05xx, R06xx, R0403, R0404, and the habits R0109, R0110, R0113, R0114 and R0117 to R0120 that need names or types to tell), then patterns (R0401, R0402). W0001 waits until there are no errors.
+The compiler stops after the first stage that reports errors: syntax (R01xx), then names and types (R0106, R02xx, R03xx, R05xx, R06xx, R0403, R0404, and the habits R0109, R0110, R0113, R0114 and R0117 to R0120 that need names or types to tell), then patterns (R0401, R0402). W0001 waits until there are no errors.
 
 R0108 to R0125 are habits carried over from Rust or Go (DESIGN §7.2). Each has its own code and, where the rewrite is mechanical, a fix. Habits do not stop the stages: the compiler reads on as if each fix were made, so one round reports every habit. When a syntax error stops the parser, the habits the tokens alone show are still reported, each once.
 
-This file covers milestone M2. Each entry shows the mistake, then the fix.
+This file covers milestone M3. Each entry shows the mistake, then the fix.
 
 ## R0101 unexpected character
 

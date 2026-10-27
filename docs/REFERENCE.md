@@ -1,6 +1,6 @@
-# Riddim reference (M2)
+# Riddim reference (M3)
 
-Riddim is a small, statically typed language that compiles to Go. It reads like a small Rust. This file is the whole language as implemented in milestone M2; anything not here is not in M2 (see "Not in M2" at the end). Diagnostic codes are explained in `docs/ERRORS.md`.
+Riddim is a small, statically typed language that compiles to Go. It reads like a small Rust. This file is the whole language as implemented in milestone M3; anything not here is not in M3 (see "Not in M3" at the end). Diagnostic codes are explained in `docs/ERRORS.md`.
 
 ## Programs and commands
 
@@ -302,7 +302,7 @@ Each Rust or Go habit below has its own error code (R0108 to R0125) and, where t
 | `;` ends statements; `{ x; }` has type `()` | A newline ends a statement; `;` means the same as a newline. A block's value is its last expression |
 | `i32`, `u64`, `usize`, `u8`, `f64`, `bool`, `char` | `Int`, `Byte`, `Float`, `Bool`; a character is a `String` |
 | `&str`, `String::from("a")`, `"a".to_owned()`, `String::new()` | `String`, `"a"`, `""` |
-| `Vec<T>`, `vec![1, 2]`, `Vec::new()`, `[T; N]` | `List<T>`, `[1, 2]`, `[]`; `push` returns a new list |
+| `Vec<T>`, `vec![1, 2]`, `Vec::new()`, `[T; N]`, `&[T]` | `List<T>`, `[1, 2]`, `[]`; `push` returns a new list |
 | `HashMap<K, V>`, `HashMap::new()`, `m.insert(k, v);` | `Map<K, V>`, `Map::new()`, `m = m.insert(k, v)`; iterates in insertion order |
 | `&x`, `&mut x`, `*x`, `&self`, `Box<T>`, lifetimes `'a` | None: values are copied; `self` by value |
 | `.clone()`, `.iter()`, `.into_iter()`, `.collect()` | Not needed: list and map methods work directly, `xs.map(f).filter(g)` |
@@ -322,7 +322,8 @@ Each Rust or Go habit below has its own error code (R0108 to R0125) and, where t
 | Go's `func`, `for i := 0; i < n; i++`, `for cond`, `for {` | `fn`, `for i in 0..n`, `while cond`, `loop` |
 | Go's `[]T`, `map[K]V`, `*T`, `for i, x := range xs` | `List<T>`, `Map<K, V>`, `T`, `for (i, x) in xs.enumerate()` |
 | Go's `package main`, `import "strings"`; Rust's `use std::...` | Nothing; `use go "strings"`; nothing |
+| Go's `fmt.Println(x)`, `os.ReadFile(p)`, `os.Getenv(k)`, `time.Now()` | `sys.out.println("${x}")`, `sys.fs.read(p)`, `sys.env.get(k)`, `sys.clock.now_ms()`: capabilities |
 
-## Not in M2
+## Not in M3
 
 Not in v0: traits, modules and `pub`, concurrency, macros, the `Net` and `Proc` capabilities (R0106), third-party Go modules (R0601).
