@@ -6,7 +6,7 @@ The compiler stops after the first stage that reports errors: syntax (R01xx), th
 
 R0108 to R0125 are habits carried over from Rust or Go (DESIGN §7.2). Each has its own code and, where the rewrite is mechanical, a fix. Habits do not stop the stages: the compiler reads on as if each fix were made, so one round reports every habit. When a syntax error stops the parser, the habits the tokens alone show are still reported, each once.
 
-This file covers milestone M3. Each entry shows the mistake, then the fix.
+This file covers Riddim v0. Each entry shows the mistake, then the fix.
 
 ## R0101 unexpected character
 

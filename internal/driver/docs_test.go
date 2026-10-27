@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -140,5 +141,43 @@ func TestReferencePrograms(t *testing.T) {
 	}
 	if checked < 3 {
 		t.Errorf("checked %d blocks, want at least 3", checked)
+	}
+}
+
+// TestReferenceCodes checks that docs/REFERENCE.md names every diagnostic
+// code, as ERRORS.md documents each (DESIGN §10.1, M4).
+func TestReferenceCodes(t *testing.T) {
+	ref, err := os.ReadFile(filepath.Join(root, "docs", "REFERENCE.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for c := range diag.Codes {
+		if !strings.Contains(string(ref), c+" ") {
+			t.Errorf("%s is not in docs/REFERENCE.md", c)
+		}
+	}
+}
+
+// TestCodesKnown checks that every code the compiler's source writes is in
+// diag.Codes, and so documented and tested.
+func TestCodesKnown(t *testing.T) {
+	code := regexp.MustCompile(`"((?:R0|W)\d{3,4})"`)
+	files, _ := filepath.Glob(filepath.Join(root, "internal", "*", "*.go"))
+	main, _ := filepath.Glob(filepath.Join(root, "cmd", "*", "*.go"))
+	n := 0
+	for _, f := range append(files, main...) {
+		if strings.HasSuffix(f, "_test.go") {
+			continue
+		}
+		b, _ := os.ReadFile(f)
+		for _, m := range code.FindAllStringSubmatch(string(b), -1) {
+			n++
+			if _, ok := diag.Codes[m[1]]; !ok {
+				t.Errorf("%s: code %s is not in diag.Codes", filepath.Base(f), m[1])
+			}
+		}
+	}
+	if n < 50 {
+		t.Errorf("found only %d codes in the source", n)
 	}
 }

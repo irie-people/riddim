@@ -1,6 +1,6 @@
-# Riddim reference (M3)
+# Riddim reference (v0)
 
-Riddim is a small, statically typed language that compiles to Go. It reads like a small Rust. This file is the whole language as implemented in milestone M3; anything not here is not in M3 (see "Not in M3" at the end). Diagnostic codes are explained in `docs/ERRORS.md`.
+Riddim is a small, statically typed language that compiles to Go. It reads like a small Rust. This file is the whole of Riddim v0; anything not here is not in v0 (see "Not in v0" at the end). Diagnostic codes are explained in `docs/ERRORS.md`.
 
 ## Programs and commands
 
@@ -289,9 +289,19 @@ fn main(sys: Sys) -> Result<(), Error> {
 - Types map from Go: `int` and `rune` to Int, `float64` to Float, `bool` to Bool, `string` to String, `byte` to Byte, `error` to Error, `[]T` to `List<T>`. A result `T` is a T, `(T, error)` a `Result<T, Error>`, `error` a `Result<(), Error>`. Anything else (other types, no result, other results, `...` parameters, Go variables and types) is R0602.
 - A rune is an Int: `unicode.IsUpper(65)`. Lists are copied into and out of Go, so Go never changes a Riddim list. A Go function is a value too: `xs.map(strings.ToUpper)`. A Go error's message is Go's: `strconv.Atoi: parsing "x": invalid syntax`.
 
-## Warnings
+## Diagnostic codes
 
-W0001 unused binding (the fix replaces it with `_`; names starting with `_` are exempt), W0002 `unwrap`/`expect`, W0003 `todo()`. Warnings do not stop a build.
+Every code is explained, with a mistake and its fix, in `docs/ERRORS.md`.
+
+- Lexing and parsing: R0101 unexpected character; R0102 unterminated string; R0103 invalid escape sequence; R0104 malformed number; R0105 syntax error; R0106 not supported in this version; R0107 break or continue outside a loop.
+- Rust and Go habits: R0108 Go's var or :=; R0109 nil; R0110 Rust or Go type name; R0111 reference or pointer; R0112 lifetime or loop label; R0113 Vec, vec! or a Go slice; R0114 HashMap or a Go map; R0115 macro; R0116 type arguments on a call; R0117 .iter(), .into_iter() or .collect(); R0118 .clone(); R0119 String::from or .to_owned(); R0120 if err != nil; R0121 pub; R0122 attribute; R0123 ++ or --; R0124 func; R0125 Go's package or import, or Rust's use.
+- Names: R0201 unknown name; R0202 duplicate name; R0203 naming style.
+- Types: R0301 mismatched types; R0302 wrong number of arguments; R0303 field error; R0304 method error; R0305 not comparable; R0306 type annotation needed; R0307 recursive struct; R0308 invalid constant.
+- Patterns: R0401 match is not exhaustive; R0402 unreachable match arm; R0403 or-pattern sides bind differently; R0404 refutable pattern in let, for or closure parameter.
+- Mutability and `?`: R0501 assignment to an immutable value; R0502 unused Result; R0503 ? on an Option in a function that returns a Result; R0504 ? with a different error type; R0505 misplaced ?.
+- Capabilities and Go: R0601 Go package not allowed; R0602 Go function or constant without a Riddim type; R0603 capabilities cannot be made; R0604 main is missing or has the wrong signature.
+- Compiler bugs: R0900 generated Go failed to compile.
+- Warnings, which do not stop a build: W0001 unused binding; W0002 unwrap or expect; W0003 todo.
 
 ## Differences from Rust
 
@@ -324,6 +334,6 @@ Each Rust or Go habit below has its own error code (R0108 to R0125) and, where t
 | Go's `package main`, `import "strings"`; Rust's `use std::...` | Nothing; `use go "strings"`; nothing |
 | Go's `fmt.Println(x)`, `os.ReadFile(p)`, `os.Getenv(k)`, `time.Now()` | `sys.out.println("${x}")`, `sys.fs.read(p)`, `sys.env.get(k)`, `sys.clock.now_ms()`: capabilities |
 
-## Not in M3
+## Not in v0
 
-Not in v0: traits, modules and `pub`, concurrency, macros, the `Net` and `Proc` capabilities (R0106), third-party Go modules (R0601).
+Traits, modules and `pub`, concurrency, macros, the `Net` and `Proc` capabilities (R0106), third-party Go modules (R0601).
