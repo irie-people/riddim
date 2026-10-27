@@ -45,10 +45,10 @@ The parser expected something else. The message says what it expected and what i
 
 ## R0106 not supported in this version
 
-`use go` and the `Env`, `Fs` and `Clock` capabilities come in milestone M3.
+The `Net` and `Proc` capabilities, for the network and other processes, and `sys.net` and `sys.proc`, come in v0.2.
 
-    fn load(fs: Fs) -> String { "" }
-    fn load(text: String) -> String { text }    // fix: take the contents as a value
+    fn fetch(net: Net, url: String) -> String { "" }
+    fn fetch(body: String) -> String { body }    // fix: take what it would fetch as a value
 
 ## R0107 break or continue outside a loop
 
@@ -327,7 +327,7 @@ Turn the Option into a Result first. The fix inserts `.ok_or(error("missing valu
 
 ## R0603 capabilities cannot be made
 
-There is no literal or constructor for Sys or Out. `main` receives `sys: Sys`; pass on what a function needs.
+There is no literal or constructor for Sys, Out, Env, Fs or Clock, and their names are not values. `main` receives `sys: Sys`, whose fields are `out`, `err`, `env`, `fs` and `clock`; pass on what a function needs.
 
     let out = Out { }
     fn log(out: Out) { out.println("hi") }       // fix: take it as a parameter

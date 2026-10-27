@@ -2,8 +2,9 @@
 
 // This is the Riddim runtime: Option, Result, Map, list helpers and the
 // capabilities. Every name that generated code can reach either is reserved
-// in Riddim (Option, Result, Map, Some, None, Ok, Err, Sys, Out) or has an
-// uppercase letter after a lowercase start, which no Riddim name can have.
+// in Riddim (Option, Result, Map, Some, None, Ok, Err, Sys, Out, Env, Fs,
+// Clock) or has an uppercase letter after a lowercase start, which no Riddim
+// name can have.
 
 package main
 
@@ -11,11 +12,13 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	"io/fs"
 	"math"
 	"os"
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
 
@@ -448,11 +451,95 @@ type Out struct{ w *os.File }
 func (o Out) print(s string)   { o.w.WriteString(s) }
 func (o Out) println(s string) { o.w.WriteString(s + "\n") }
 
-// Sys is the root capability, handed to main. This version gives it
-// standard output and standard error.
+// Env is the Env capability: the program's environment and arguments.
+type Env struct{}
+
+// get is Env.get: the value of an environment variable, or None when it is
+// not set.
+func (Env) get(name string) Option[string] {
+	if v, ok := os.LookupEnv(name); ok {
+		return Some(v)
+	}
+	return None[string]()
+}
+
+// args is Env.args: the program's arguments, without its name.
+func (Env) args() []string { return slices.Clone(os.Args[1:]) }
+
+// Fs is the Fs capability: the file system. Relative paths are relative to
+// the directory the program runs in.
+type Fs struct{}
+
+// read is Fs.read: the text of a file, which must be UTF-8.
+func (Fs) read(path string) Result[string, error] {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return Err[string](fsError("read", path, err))
+	}
+	if !utf8.Valid(b) {
+		return Err[string](fmt.Errorf("cannot read %s: it is not UTF-8 text", path))
+	}
+	return Ok[string, error](string(b))
+}
+
+// write is Fs.write: it creates a file, or replaces what it holds, with
+// text.
+func (Fs) write(path, text string) Result[struct{}, error] {
+	if err := os.WriteFile(path, []byte(text), 0o644); err != nil {
+		return Err[struct{}](fsError("write", path, err))
+	}
+	return Ok[struct{}, error](struct{}{})
+}
+
+// exists is Fs.exists: whether there is a file or a directory at path.
+func (Fs) exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+// list is Fs.list: the names in a directory, sorted.
+func (Fs) list(dir string) Result[[]string, error] {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return Err[[]string](fsError("list", dir, err))
+	}
+	names := make([]string, len(entries))
+	for i, e := range entries {
+		names[i] = e.Name()
+	}
+	return Ok[[]string, error](names)
+}
+
+// fsError describes a failed file operation the same way on every system,
+// as in "cannot read notes.txt: no such file or directory".
+func fsError(op, path string, err error) error {
+	reason := err.Error()
+	var pe *fs.PathError
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		reason = "no such file or directory"
+	case errors.Is(err, fs.ErrPermission):
+		reason = "permission denied"
+	case errors.As(err, &pe):
+		reason = pe.Err.Error()
+	}
+	return fmt.Errorf("cannot %s %s: %s", op, path, reason)
+}
+
+// Clock is the Clock capability: the time.
+type Clock struct{}
+
+// now_ms is Clock.now_ms: Unix time in milliseconds.
+func (Clock) now_ms() int { return int(time.Now().UnixMilli()) }
+
+// Sys is the root capability, handed to main: standard output and error,
+// the environment, the file system and the clock.
 type Sys struct {
-	out Out
-	err Out
+	out   Out
+	err   Out
+	env   Env
+	fs    Fs
+	clock Clock
 }
 
 func newSys() Sys { return Sys{out: Out{os.Stdout}, err: Out{os.Stderr}} }

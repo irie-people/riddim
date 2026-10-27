@@ -153,7 +153,8 @@ var reserved = map[string]string{
 	"Int": "type", "Float": "type", "Bool": "type", "String": "type", "Byte": "type",
 	"List": "type", "Map": "type", "Option": "type", "Result": "type", "Error": "type",
 	"Never": "type", "Sys": "capability", "Out": "capability", "Env": "capability",
-	"Fs": "capability", "Clock": "capability", "Some": "constructor", "None": "constructor",
+	"Fs": "capability", "Clock": "capability", "Net": "capability", "Proc": "capability",
+	"Some": "constructor", "None": "constructor",
 	"Ok": "constructor", "Err": "constructor", "error": "function", "panic": "function",
 	"todo": "function",
 }
@@ -433,7 +434,7 @@ func (c *checker) leaveSig() {
 }
 
 func (c *checker) typeNames() []string {
-	names := []string{"Int", "Float", "Bool", "String", "Byte", "List", "Map", "Option", "Result", "Error", "Never", "Sys", "Out"}
+	names := []string{"Int", "Float", "Bool", "String", "Byte", "List", "Map", "Option", "Result", "Error", "Never", "Sys", "Out", "Env", "Fs", "Clock"}
 	for name, g := range c.globals {
 		if _, ok := g.(*TypeDecl); ok {
 			names = append(names, name)
@@ -505,12 +506,20 @@ func (c *checker) resolveNamed(t *syntax.NamedType) Type {
 		return tp
 	}
 	switch name {
-	case "Int", "Float", "Bool", "String", "Byte", "Error", "Never", "Sys", "Out":
+	case "Int", "Float", "Bool", "String", "Byte", "Error", "Never":
 		if !arity(0) {
 			return invalid
 		}
 		return map[string]Type{"Int": Int, "Float": Float, "Bool": Bool, "String": String, "Byte": Byte,
-			"Error": ErrorT, "Never": Never, "Sys": SysT, "Out": OutT}[name]
+			"Error": ErrorT, "Never": Never}[name]
+	case "Sys", "Out", "Env", "Fs", "Clock":
+		if !arity(0) {
+			return invalid
+		}
+		return capTypes[name]
+	case "Net", "Proc":
+		c.errorf("R0106", t.Name.Span(), "`%s` is not supported in this version: the network and process capabilities arrive in v0.2", name)
+		return invalid
 	case "List", "Option":
 		if !arity(1) {
 			return invalid
@@ -534,9 +543,6 @@ func (c *checker) resolveNamed(t *syntax.NamedType) Type {
 			return invalid
 		}
 		return &Result{args[0], args[1]}
-	case "Env", "Fs", "Clock":
-		c.errorf("R0106", t.Name.Span(), "`%s` is not supported in this version", name)
-		return invalid
 	case "Self":
 		if c.selfType == nil {
 			c.errorf("R0201", t.Name.Span(), "`Self` is only available inside an impl block")

@@ -103,3 +103,25 @@ func TestBuildEmitRun(t *testing.T) {
 		}
 	}
 }
+
+// TestFsReadNotText checks that Fs.read gives an Err for a file that is not
+// UTF-8 text, since a String always is.
+func TestFsReadNotText(t *testing.T) {
+	dir := writeProgram(t, "fn main(sys: Sys) {\n    match sys.fs.read(\"data.bin\") {\n        Ok(text) => sys.out.println(\"read ${text.len()} bytes\"),\n        Err(e) => sys.out.println(e.message()),\n    }\n}\n")
+	bin := filepath.Join(t.TempDir(), "prog")
+	if _, errs, code := riddim(t, "build", dir, "-o", bin); code != 0 {
+		t.Fatalf("build: exit %d\n%s", code, errs)
+	}
+	work := t.TempDir()
+	for name, data := range map[string][]byte{"data.bin": {'a', 0xff, 0xfe}, "text.txt": []byte("é\n")} {
+		if err := os.WriteFile(filepath.Join(work, name), data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	cmd := exec.Command(bin)
+	cmd.Dir = work
+	out, err := cmd.Output()
+	if err != nil || string(out) != "cannot read data.bin: it is not UTF-8 text\n" {
+		t.Errorf("got %q, %v", out, err)
+	}
+}

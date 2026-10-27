@@ -1,0 +1,18 @@
+fn main(sys: Sys) {
+    let e = Env { }
+    let f = Fs::new()
+    let c = Clock
+    let x = sys.files
+    let y = sys.clock.now()
+    let z = sys.fs.read()
+    let w: Result<Int, Error> = sys.fs.read("a.txt")
+    let v = sys.env.length
+    let _ = e
+    let _ = f
+    let _ = c
+    let _ = x
+    let _ = y
+    let _ = z
+    let _ = w
+    let _ = v
+}

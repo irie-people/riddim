@@ -22,6 +22,7 @@ type program struct {
 	srcs  map[string][]byte // file name -> source
 	out   string
 	args  []string
+	env   []string // NAME=value: the program's whole environment
 	exit  int
 	where string
 }
@@ -32,7 +33,8 @@ func readOpt(path string) (string, bool) {
 }
 
 // runPrograms collects testdata/run/<name>.rdm, testdata/run/<name>/ and
-// examples/<name>/, each with <name>.out and optional .args and .exit.
+// examples/<name>/, each with <name>.out and optional .args, .env (one
+// NAME=value a line) and .exit.
 func runPrograms(t *testing.T) []program {
 	var ps []program
 	add := func(name, dir, expect string, srcs map[string][]byte) {
@@ -44,6 +46,9 @@ func runPrograms(t *testing.T) []program {
 		p := program{name: name, srcs: srcs, out: out, where: dir}
 		if a, ok := readOpt(expect + ".args"); ok {
 			p.args = strings.Fields(a)
+		}
+		if e, ok := readOpt(expect + ".env"); ok {
+			p.env = strings.Split(strings.TrimSuffix(e, "\n"), "\n")
 		}
 		if e, ok := readOpt(expect + ".exit"); ok {
 			p.exit, _ = strconv.Atoi(strings.TrimSpace(e))
@@ -83,6 +88,9 @@ func runPrograms(t *testing.T) []program {
 
 // TestRun builds every run test and example, checks the generated Go with go
 // vet, runs each binary and compares its standard output and exit status.
+// Each runs in a new empty directory, with only the environment of its .env
+// file, so that what it does with files and the environment is the same on
+// every machine.
 func TestRun(t *testing.T) {
 	ps := runPrograms(t)
 	for _, required := range []string{"example_hello", "example_shapes", "example_parse", "example_events"} {
@@ -149,6 +157,8 @@ func TestRun(t *testing.T) {
 		t.Run(p.name, func(t *testing.T) {
 			t.Parallel()
 			cmd := exec.Command(filepath.Join(tmp, "bin", p.name), p.args...)
+			cmd.Dir = t.TempDir()
+			cmd.Env = append([]string{}, p.env...)
 			var stdout, stderr bytes.Buffer
 			cmd.Stdout, cmd.Stderr = &stdout, &stderr
 			err := cmd.Run()

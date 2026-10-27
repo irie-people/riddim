@@ -1,5 +1,10 @@
 package check
 
+import (
+	"sort"
+	"strings"
+)
+
 // A builtin is a method of a built-in type. Its key names it for the emitter.
 // Type arguments are the receiver's (List<T>: T; Option<T>: T; Result<T, E>:
 // T, E) followed by the method's own.
@@ -167,9 +172,36 @@ var basicMethods = map[*Basic]map[string]*builtin{
 	ErrorT: errorMethods,
 }
 
-var outMethods = map[string]*builtin{
-	"print":   {key: "out.print", sig: func(r, o []Type) ([]Type, Type) { return []Type{String}, Unit }},
-	"println": {key: "out.println", sig: func(r, o []Type) ([]Type, Type) { return []Type{String}, Unit }},
+// The capabilities' methods (DESIGN §5.2).
+var (
+	outMethods = map[string]*builtin{
+		"print":   simple("out.print", Unit, String),
+		"println": simple("out.println", Unit, String),
+	}
+	envMethods = map[string]*builtin{
+		"get":  simple("env.get", &Option{String}, String),
+		"args": simple("env.args", &List{String}),
+	}
+	fsMethods = map[string]*builtin{
+		"read":   simple("fs.read", &Result{String, ErrorT}, String),
+		"write":  simple("fs.write", &Result{Unit, ErrorT}, String, String),
+		"exists": simple("fs.exists", Bool, String),
+		"list":   simple("fs.list", &Result{&List{String}, ErrorT}, String),
+	}
+	clockMethods = map[string]*builtin{
+		"now_ms": simple("clock.now_ms", Int),
+	}
+	capMethods = map[*Cap]map[string]*builtin{OutT: outMethods, EnvT: envMethods, FsT: fsMethods, ClockT: clockMethods}
+)
+
+// methodList names the methods of a table, in order.
+func methodList(m map[string]*builtin) string {
+	var names []string
+	for n := range m {
+		names = append(names, "`"+n+"`")
+	}
+	sort.Strings(names)
+	return strings.Join(names, ", ")
 }
 
 // methodsOf returns the built-in methods of t, the receiver's type arguments
@@ -187,10 +219,7 @@ func methodsOf(t Type) (map[string]*builtin, []Type, string) {
 	case *Basic:
 		return basicMethods[t], nil, t.name
 	case *Cap:
-		if t == OutT {
-			return outMethods, nil, "Out"
-		}
-		return nil, nil, t.Name
+		return capMethods[t], nil, t.Name
 	case *Tuple:
 		return nil, nil, "a tuple"
 	case *Func:

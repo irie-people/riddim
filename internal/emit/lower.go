@@ -1160,6 +1160,9 @@ func (f *fn) builtin(mu *check.MethodUse, recv value, args []value) value {
 	case "out.print", "out.println":
 		f.printf("%s.%s(%s)\n", r, strings.TrimPrefix(mu.Builtin, "out."), joinVals(args))
 		return value{s: "struct{}{}", stable: true}
+	case "env.get", "env.args", "fs.read", "fs.write", "fs.exists", "fs.list", "clock.now_ms":
+		_, method, _ := strings.Cut(mu.Builtin, ".")
+		return value{s: r + "." + method + "(" + joinVals(args) + ")"}
 	}
 	return value{s: "nil"}
 }

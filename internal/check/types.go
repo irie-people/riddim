@@ -68,7 +68,7 @@ type (
 		Decl *TypeDecl
 		Args []Type
 	}
-	// Cap is a capability: Sys or Out in this version.
+	// Cap is a capability: Sys, Out, Env, Fs or Clock.
 	Cap struct{ Name string }
 	// Var is an inference variable, bound once its type is known.
 	Var struct {
@@ -81,11 +81,20 @@ type (
 	Invalid struct{}
 )
 
-// The capabilities of this version.
+// The capabilities of v0 (DESIGN §5.2).
 var (
-	SysT = &Cap{"Sys"}
-	OutT = &Cap{"Out"}
+	SysT   = &Cap{"Sys"}
+	OutT   = &Cap{"Out"}
+	EnvT   = &Cap{"Env"}
+	FsT    = &Cap{"Fs"}
+	ClockT = &Cap{"Clock"}
 )
+
+// capTypes are the capabilities by name.
+var capTypes = map[string]*Cap{"Sys": SysT, "Out": OutT, "Env": EnvT, "Fs": FsT, "Clock": ClockT}
+
+// sysFields are the fields of Sys.
+var sysFields = map[string]*Cap{"out": OutT, "err": OutT, "env": EnvT, "fs": FsT, "clock": ClockT}
 
 var invalid = &Invalid{}
 

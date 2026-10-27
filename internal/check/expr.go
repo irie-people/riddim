@@ -249,6 +249,10 @@ func (c *checker) ident(e *syntax.Ident, want Type) Type {
 	if e.Name == "nil" {
 		return c.nilValue(e, want)
 	}
+	if capTypes[e.Name] != nil {
+		c.cannotMake(e.Span(), "`%s` is a type, not a value", e.Name)
+		return invalid
+	}
 	d := c.unknown(e, "name", c.valueNames())
 	if en := c.enumWithVariant(e.Name); en != "" {
 		d.Notes = append(d.Notes, fmt.Sprintf("variants are written with their enum: `%s::%s`", en, e.Name))
@@ -337,10 +341,8 @@ func (c *checker) pathType(id *syntax.Ident) (*TypeDecl, []Type, bool) {
 		}
 		return c.selfDecl, c.selfType.(*Named).Args, true
 	}
-	switch id.Name {
-	case "Sys", "Out":
-		d := c.errorf("R0603", id.Span(), "capabilities cannot be made: there is no `%s::...`", id.Name)
-		d.Notes = append(d.Notes, "main receives `sys: Sys`; other functions receive the capabilities they are passed")
+	if capTypes[id.Name] != nil {
+		c.cannotMake(id.Span(), "`%s` has no constructor", id.Name)
 		return nil, nil, false
 	}
 	td, ok := c.globals[id.Name].(*TypeDecl)
@@ -754,6 +756,8 @@ var methodAliases = map[string]string{
 	"put": "insert", "set": "insert", "delete": "remove", "items": "entries",
 	"unwrap_or_default": "unwrap_or",
 	"to_str":            "to_string", "as_str": "to_string",
+	"read_to_string": "read", "read_file": "read", "write_file": "write", "read_dir": "list",
+	"var": "get", "getenv": "get", "now": "now_ms", "millis": "now_ms",
 }
 
 func (c *checker) field(e *syntax.FieldExpr) Type {
@@ -799,14 +803,23 @@ func (c *checker) field(e *syntax.FieldExpr) Type {
 		}
 		return invalid
 	case *Cap:
-		if x == SysT && (name == "out" || name == "err") {
+		switch {
+		case x == SysT && sysFields[name] != nil:
 			c.info.Fields[e] = &FieldUse{Sys: name, Tuple: -1}
-			return OutT
-		}
-		if x == SysT {
-			c.errorf("R0303", e.Name.Span(), "Sys has no field `%s` in this version; it has `out` and `err`", name)
-		} else {
-			c.errorf("R0303", e.Name.Span(), "%s has no fields", x.Name)
+			return sysFields[name]
+		case x == SysT && (name == "net" || name == "proc"):
+			c.errorf("R0106", e.Name.Span(), "`sys.%s` is not supported in this version: the network and process capabilities arrive in v0.2", name)
+		case x == SysT:
+			msg := fmt.Sprintf("Sys has no field `%s`; it has `out`, `err`, `env`, `fs` and `clock`", name)
+			if close := closest(name, []string{"out", "err", "env", "fs", "clock"}); len(close) > 0 {
+				msg += "; did you mean " + orList(close) + "?"
+			}
+			c.errorf("R0303", e.Name.Span(), "%s", msg)
+		default:
+			d := c.errorf("R0303", e.Name.Span(), "%s has no fields", x.Name)
+			if m := capMethods[x]; m != nil {
+				d.Notes = append(d.Notes, "call one of its methods: "+methodList(m))
+			}
 		}
 		return invalid
 	case *Invalid, *Var:
@@ -1154,11 +1167,11 @@ func (c *checker) structLit(e *syntax.StructLit, want Type) Type {
 	}
 	var td *TypeDecl
 	var targs []Type
-	switch name {
-	case "Sys", "Out":
-		d := c.errorf("R0603", e.Type.Span(), "capabilities cannot be made: there is no `%s { ... }`", name)
-		d.Notes = append(d.Notes, "main receives `sys: Sys`; other functions receive the capabilities they are passed")
+	if capTypes[name] != nil {
+		c.cannotMake(e.Type.Span(), "there is no literal `%s { ... }`", name)
 		return rest()
+	}
+	switch name {
 	case "Self":
 		if c.selfDecl == nil {
 			c.errorf("R0201", e.Type.Span(), "`Self` is only available inside an impl block")
@@ -1241,4 +1254,11 @@ func andList(items []string) string {
 		return items[0]
 	}
 	return strings.Join(items[:len(items)-1], ", ") + " and " + items[len(items)-1]
+}
+
+// cannotMake reports a capability being made (R0603): there is no literal or
+// constructor for one. why says what was tried, for the capability name.
+func (c *checker) cannotMake(sp syntax.Span, why, name string) {
+	d := c.errorf("R0603", sp, "capabilities cannot be made: "+why, name)
+	d.Notes = append(d.Notes, "main receives `sys: Sys`, whose fields are `out`, `err`, `env`, `fs` and `clock`; other functions receive the capabilities they are passed")
 }

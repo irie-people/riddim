@@ -1,0 +1,16 @@
+2 args: one, two
+GREETING=hello
+EMPTY=[]
+HOME is set: false
+saved b.txt
+saved a.txt
+saved a.txt
+exists: true true false
+list: a.txt b.txt
+a.txt: alpha, again
+error: cannot read c.txt: no such file or directory
+list a file: true
+write in a missing directory: true
+..
+log: closures capture capabilities
+clock: true true

@@ -92,7 +92,7 @@ fn main(sys: Sys) -> Result<(), Error> {
 | `Error` | An error message, possibly wrapping another |
 | `fn(A, B) -> R` | Function value; `fn(A)` returns `()` |
 | `Never` | Type of `return`, `break`, `continue`, `panic(...)`, `todo()`; fits where any type is expected |
-| `Sys`, `Out` | Capabilities (see below) |
+| `Sys`, `Out`, `Env`, `Fs`, `Clock` | Capabilities (see below) |
 | structs, enums | Declared in the program, possibly generic: `Stack<Int>` |
 
 - No nil, no pointers or references, no implicit conversions. `as` converts between Int, Float and Byte only: `n as Float`; `f as Int` truncates toward zero and saturates at Int's ends (NaN gives 0); `f as Byte` saturates at 0 and 255; `n as Byte` keeps the low 8 bits. Mixing Int and Float is R0301, whose fix adds `as Float`.
@@ -240,22 +240,32 @@ Lists and maps are immutable: `push`, `set`, `insert` and `remove` return a new 
 
 ## Capabilities
 
-Code affects the world outside the program only through a capability it was handed. `main` receives the root capability:
+Code affects the world outside the program only through a capability it was handed. `main` receives the root capability, `Sys`:
 
 ```
-fn main(sys: Sys) {
-    greet(sys.out, "world")
+fn main(sys: Sys) -> Result<(), Error> {
+    let text = load(sys.fs, "app.conf")?
+    sys.out.println("loaded ${text.len()} bytes")
     sys.err.println("this goes to standard error")
+    Ok(())
 }
 
-fn greet(out: Out, name: String) {
-    out.println("hello, ${name}")
+fn load(fs: Fs, path: String) -> Result<String, Error> {
+    fs.read(path).map_err(|e| e.context("reading ${path}"))
 }
 ```
 
-- M2 has `Sys` with the fields `out` and `err`, both `Out` (standard output and standard error).
-- Capabilities can be passed, stored and returned, but never made: there is no literal or constructor (R0603).
+| Capability | From `Sys` | Methods |
+|---|---|---|
+| `Out` | `sys.out`, `sys.err` | `print(s)`, `println(s)` |
+| `Env` | `sys.env` | `get(name) -> Option<String>`, `args() -> List<String>` (without the program name) |
+| `Fs` | `sys.fs` | `read(path) -> Result<String, Error>` (UTF-8 text), `write(path, text) -> Result<(), Error>` (creates or replaces), `exists(path) -> Bool`, `list(dir) -> Result<List<String>, Error>` (sorted names) |
+| `Clock` | `sys.clock` | `now_ms() -> Int` (Unix time in milliseconds) |
+
+- Capabilities can be passed, stored in structs and lists, captured by closures and returned, but never made: there is no literal or constructor (R0603). Passing one delegates it.
+- Relative paths are relative to the directory the program runs in. Errors read like `cannot read app.conf: no such file or directory`.
 - `main` takes `sys: Sys` or nothing, and returns nothing or `Result<(), Error>` (R0604). An `Err` from `main` prints `error: <message>` to standard error and exits with status 1. A panic exits with status 2.
+- `Net` and `Proc` (network and processes) come in v0.2 (R0106).
 
 ## Warnings
 
@@ -293,4 +303,4 @@ Each Rust or Go habit below has its own error code (R0108 to R0125) and, where t
 
 ## Not in M2
 
-These come in later milestones; using them gives R0106 or an unknown-name error: `use go "..."` and Go packages, and the `Env`, `Fs` and `Clock` capabilities (milestone M3). Not in v0: traits, modules and `pub`, concurrency, macros.
+These come in later milestones; using them gives R0106 or an unknown-name error: `use go "..."` and Go packages (milestone M3). Not in v0: traits, modules and `pub`, concurrency, macros, the `Net` and `Proc` capabilities.

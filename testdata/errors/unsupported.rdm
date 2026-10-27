@@ -1,7 +1,9 @@
-fn read(fs: Fs) -> String {
-    "nothing"
+fn fetch(net: Net, url: String) -> String {
+    url
 }
 
-fn main() {
-    let _ = read
+fn main(sys: Sys) {
+    let n = sys.net
+    let _ = fetch
+    let _ = n
 }

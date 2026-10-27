@@ -1,0 +1,59 @@
+// Capabilities: Env, Fs and Clock are passed, stored and returned like any
+// value. The test runs in an empty directory, with the arguments in
+// caps.args and the environment in caps.env.
+
+struct Tools {
+    fs: Fs,
+    out: Out,
+}
+
+fn save(t: Tools, name: String, text: String) -> Result<(), Error> {
+    t.fs.write(name, text)?
+    t.out.println("saved ${name}")
+    Ok(())
+}
+
+fn show(fs: Fs, out: Out, name: String) {
+    match fs.read(name) {
+        Ok(text) => out.println("${name}: ${text.trim()}"),
+        Err(e) => out.println("error: ${e.message()}"),
+    }
+}
+
+fn files(sys: Sys) -> Fs {
+    sys.fs
+}
+
+fn main(sys: Sys) -> Result<(), Error> {
+    let env = sys.env
+    let args = env.args()
+    sys.out.println("${args.len()} args: ${args.join(", ")}")
+    sys.out.println("GREETING=${env.get("GREETING").unwrap_or("unset")}")
+    sys.out.println("EMPTY=[${env.get("EMPTY").unwrap_or("unset")}]")
+    sys.out.println("HOME is set: ${env.get("HOME").is_some()}")
+
+    let tools = Tools { fs: files(sys), out: sys.out }
+    save(tools, "b.txt", "beta")?
+    save(tools, "a.txt", "alpha\n")?
+    save(tools, "a.txt", "alpha, again\n")?
+    sys.out.println("exists: ${sys.fs.exists("a.txt")} ${sys.fs.exists(".")} ${sys.fs.exists("c.txt")}")
+    let names = sys.fs.list(".")?
+    sys.out.println("list: ${names.join(" ")}")
+    show(sys.fs, sys.out, "a.txt")
+    show(tools.fs, tools.out, "c.txt")
+    sys.out.println("list a file: ${sys.fs.list("a.txt").is_err()}")
+    sys.out.println("write in a missing directory: ${sys.fs.write("no/such/dir.txt", "x").is_err()}")
+
+    let outs = [sys.out, sys.out]
+    let _ = outs.map(|o| o.print("."))
+    sys.out.println("")
+    let log = |line: String| sys.out.println("log: ${line}")
+    log("closures capture capabilities")
+
+    let start = sys.clock.now_ms()
+    let later = sys.clock.now_ms()
+    sys.out.println("clock: ${start > 1_600_000_000_000} ${later >= start}")
+    let text = sys.fs.read("missing.txt").map_err(|e| e.context("loading"))?
+    sys.out.println("unreachable: ${text}")
+    Ok(())
+}
