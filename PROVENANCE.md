@@ -58,6 +58,7 @@ Riddim is written from public documentation and public open-source projects. Eve
 | 2026-10-31 | https://docs.github.com/en/actions/reference/runners/github-hosted-runners | The standard runners for public repositories: `ubuntu-latest` has 4 CPUs and `macos-latest` 3 M1 cores, each a new virtual machine; why CI does not hold `riddim check` to its 200 ms wall-clock budget (`.github/workflows/test.yml`) |
 | 2026-10-31 | https://github.com/actions/setup-go (v5: `README.md`, `action.yml`, `src/main.ts`, `src/cache-restore.ts`, `src/cache-save.ts`) | `go-version-file: go.mod` installs the latest patch release of the version that `go` names that it finds, looking first in the runner's tool cache; the cache is keyed on `go.sum`, which a module without dependencies does not have, so it could only log a failed restore and is turned off |
 | 2026-10-31 | `go help testflag` (`-short`), `go doc testing.Short` | CI runs `go test -short`, which skips the tests that time wall-clock work, `TestCheckSpeed` and `TestPrescanLinear`, and no others |
+| 2026-10-31 | https://github.com/irie-people/irie (`site/style.css`, `site/index.html`, `.github/workflows/pages.yml`; Apache-2.0, the same project family) ; https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages | `site/`: the layout, type scale and footer shared by the irie-people sites, and `pages.yml`, which publishes `site/` with GitHub's own Pages actions |
 
 ### Ideas from prior knowledge
 

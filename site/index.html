@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Riddim · a small language for code that agents write and people review</title>
+<meta name="description" content="Riddim reads like a small Rust, compiles to readable Go, and stops what AI agents most often get wrong before it reaches you.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the content</a>
+
+<header class="site-header">
+  <a class="brand" href="./">
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false"><rect width="64" height="64" rx="14" fill="#1F1F24"/><g fill="#F2B544"><rect x="11.5" y="27" width="5" height="10" rx="2.5"/><rect x="20.5" y="19" width="5" height="26" rx="2.5"/><rect x="29.5" y="12" width="5" height="40" rx="2.5"/><rect x="38.5" y="22" width="5" height="20" rx="2.5"/><rect x="47.5" y="28" width="5" height="8" rx="2.5"/></g></svg>
+    <span>Riddim</span>
+  </a>
+  <nav aria-label="Site">
+    <ul>
+      <li><a href="#why">Why</a></li>
+      <li><a href="#install">Install</a></li>
+      <li><a href="#docs">Docs</a></li>
+      <li><a href="https://github.com/irie-people/riddim">Code</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main id="main">
+  <section class="hero">
+    <p class="kicker"><dfn>rid·dim</dfn> /ˈrɪd.ɪm/ · noun, Jamaican Patois · The rhythm a song is built on. One riddim carries many voices.</p>
+    <h1>A small language for code that agents write and people review.</h1>
+    <p class="lede">It reads like a small Rust, compiles to readable Go, and stops what agents most often get wrong before it reaches you: nil, ignored errors, missed cases, and code that touches files or the network without being handed the right to.</p>
+    <div class="actions">
+      <a class="button" href="#install">Install</a>
+      <a class="button quiet" href="https://github.com/irie-people/riddim/blob/main/docs/REFERENCE.md">Read the reference</a>
+    </div>
+<pre><code><span class="k">enum</span> <span class="t">Shape</span> {
+    Circle(radius: <span class="t">Float</span>),
+    Rect(w: <span class="t">Float</span>, h: <span class="t">Float</span>),
+}
+
+<span class="k">fn</span> area(s: <span class="t">Shape</span>) -&gt; <span class="t">Float</span> {
+    <span class="k">match</span> s {
+        Circle(r) =&gt; <span class="n">3.14159</span> * r * r,
+        Rect(w, h) =&gt; w * h,
+    }
+}
+
+<span class="k">fn</span> main(sys: <span class="t">Sys</span>) {
+    <span class="k">let</span> shapes = [<span class="t">Shape</span>::Circle(<span class="n">1.0</span>), <span class="t">Shape</span>::Rect(<span class="n">2.0</span>, <span class="n">3.0</span>)]
+    <span class="k">for</span> s <span class="k">in</span> shapes {
+        sys.out.println(area(s).to_string())
+    }
+}</code></pre>
+  </section>
+
+  <section id="why" aria-labelledby="why-h">
+    <h2 id="why-h">Why Riddim</h2>
+    <ul class="cards two">
+      <li class="card">
+        <h3>Cheap to check</h3>
+        <p>Every diagnostic has a code, an exact place and, where it can, a fix a tool can apply. An agent fixes its own code in milliseconds, before a reviewer spends a token on it.</p>
+      </li>
+      <li class="card">
+        <h3>Small enough to learn from the prompt</h3>
+        <p>The whole language reference is kept under about 6,000 tokens, so even a small local model can carry it.</p>
+      </li>
+      <li class="card">
+        <h3>Code can only touch what it's handed</h3>
+        <p>Files, the environment and the clock reach a function only as parameters. A signature tells you what the code can do, and a change that widens it stands out in review.</p>
+      </li>
+      <li class="card">
+        <h3>Go underneath</h3>
+        <p>Riddim compiles to readable Go, so you keep Go's speed, tooling, cross-compiling and packages.</p>
+      </li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="diag-h">
+    <h2 id="diag-h">A mistake, caught with its fix</h2>
+    <p>Leave a case out of a <code>match</code>, and <code>riddim check</code> says so, where, and how to fix it:</p>
+<pre class="term"><code>main.rdm:7:5: <span class="err">error[R0401]</span>: match on Shape is missing 1 case: Rect(_, _)
+<span class="faint">  |
+7 |</span>     match s {
+<span class="faint">  |     ^^^^^^^</span>
+<span class="fix">  = fix: add the missing arm: `Rect(_, _) =&gt; todo(),`</span></code></pre>
+    <p><code>riddim check --json</code> gives the same in JSON, with the fix as an edit a tool can apply.</p>
+  </section>
+
+  <section id="install" aria-labelledby="install-h">
+    <h2 id="install-h">Install</h2>
+    <p>Riddim needs <a href="https://go.dev/dl/">Go</a> 1.27 or newer.</p>
+<pre><code>go install github.com/irie-people/riddim/cmd/riddim@latest</code></pre>
+    <div class="table-wrap">
+      <table>
+        <tbody>
+          <tr><th scope="row"><code>riddim check [dir] [--json]</code></th><td>Check every <code>.rdm</code> file in dir (default <code>.</code>)</td></tr>
+          <tr><th scope="row"><code>riddim build [dir] [-o out]</code></th><td>Check, write Go into <code>dir/.riddim/go</code>, then <code>go build</code></td></tr>
+          <tr><th scope="row"><code>riddim run [dir] [-- args]</code></th><td>Build, then run the program with args</td></tr>
+          <tr><th scope="row"><code>riddim emit [dir] [-o gen]</code></th><td>Write the generated Go and stop</td></tr>
+          <tr><th scope="row"><code>riddim version</code></th><td>Print the version</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="docs" aria-labelledby="docs-h">
+    <h2 id="docs-h">Docs and status</h2>
+    <ul>
+      <li><a href="https://github.com/irie-people/riddim/blob/main/docs/REFERENCE.md">The language reference</a>, short enough to put in a prompt</li>
+      <li><a href="https://github.com/irie-people/riddim/blob/main/docs/ERRORS.md">Every error code</a>, with its fix</li>
+      <li><a href="https://github.com/irie-people/riddim/blob/main/docs/DESIGN.md">The design and the plan</a></li>
+      <li><a href="https://github.com/irie-people/riddim/tree/main/examples">Examples</a></li>
+    </ul>
+    <p>0.1.0 is the first release: the v0 language, its checker and the Go it compiles to. Next in the plan are <code>riddim fmt</code>, <code>riddim fix</code>, and <code>test</code> blocks with fake capabilities. Riddim is built for <a href="https://irie-people.github.io/irie/">Irie</a>, which runs many coding agents side by side.</p>
+  </section>
+
+  <section aria-labelledby="paid-h">
+    <h2 id="paid-h">Free, and paid back</h2>
+    <p>If Riddim ever makes money (donations, sponsorships, grants), it all goes back to the people who build it, after running costs, in proportion to the value of what they contributed. The record is public: <a href="https://github.com/irie-people/riddim-stake">irie-people/riddim-stake</a>. It runs on <a href="https://irie-people.github.io/steak/">Steak</a>.</p>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <nav class="family" aria-label="Irie People">
+    <a href="https://irie-people.github.io/"><strong>Irie People</strong></a>
+    <a href="https://irie-people.github.io/irie/"><span class="dot irie" aria-hidden="true"></span>Irie</a>
+    <a href="https://irie-people.github.io/riddim/" aria-current="page"><span class="dot riddim" aria-hidden="true"></span>Riddim</a>
+    <a href="https://irie-people.github.io/steak/"><span class="dot steak" aria-hidden="true"></span>Steak</a>
+  </nav>
+  <p>Riddim is free under the <a href="https://github.com/irie-people/riddim/blob/main/LICENSE">Apache 2.0 license</a>. It is built from public documentation, and every source is listed in <a href="https://github.com/irie-people/riddim/blob/main/PROVENANCE.md">PROVENANCE.md</a>.</p>
+</footer>
+</body>
+</html>
