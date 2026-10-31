@@ -40,7 +40,13 @@ Riddim is built for [Irie](https://github.com/irie-people/irie), which runs many
 
 ## Status
 
-Early and unreleased. Nothing to install yet. The plan is [docs/DESIGN.md](docs/DESIGN.md).
+0.1.0 is the first release: the v0 language, its checker and the Go it compiles to. Install it with Go 1.27 or newer:
+
+```sh
+go install github.com/irie-people/riddim/cmd/riddim@latest
+```
+
+The website is <https://irie-people.github.io/riddim/>, and the plan is [docs/DESIGN.md](docs/DESIGN.md).
 
 ## Free, and paid back
 
