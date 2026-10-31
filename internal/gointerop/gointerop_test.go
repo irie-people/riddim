@@ -1,6 +1,10 @@
 package gointerop
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"go/types"
 	"strings"
 	"testing"
 )
@@ -58,5 +62,56 @@ func TestImport(t *testing.T) {
 	}
 	if _, err := Import("os"); err == nil {
 		t.Error("Import(os) succeeded")
+	}
+}
+
+// TestReadShallow checks that every allowed package is read with only its
+// own imports and that what Riddim uses of it is complete, so that Import
+// never reads the whole import tree for it. The check package's
+// TestShallowImportMatchesSource compares what is read with go/importer's.
+func TestReadShallow(t *testing.T) {
+	if err := findGoroot(); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range allowed {
+		p, err := readShallow(token.NewFileSet(), path)
+		if err != nil {
+			t.Fatalf("readShallow(%q): %v", path, err)
+		}
+		if p.Path() != path || !complete(p) {
+			t.Errorf("readShallow(%q) = %s, complete %v", path, p.Path(), complete(p))
+		}
+	}
+}
+
+// TestComplete checks that an exported function or constant that names a
+// package left empty makes a read incomplete, and that variables, types and
+// unexported functions, of which Riddim uses at most the name, do not.
+func TestComplete(t *testing.T) {
+	tests := []struct {
+		decls string
+		want  bool
+	}{
+		{"func F(s string) []string { return nil }\nconst K = 1", true},
+		{"func f(x e.T) int { return 0 }", true},
+		{"var V = e.V\ntype T e.T\ntype S struct{ x e.T }", true},
+		{"func F(x e.T) int { return 0 }", false},
+		{"func F() (n int, err e.Error) { return }", false},
+		{"type A = e.T\nfunc F(xs []A) int { return 0 }", false},
+		{"const K = e.K + 1", false},
+		{"const K e.Kind = 1", false},
+	}
+	for _, tt := range tests {
+		fset := token.NewFileSet()
+		f, err := parser.ParseFile(fset, "p.go", "package p\n\nimport \"e\"\n\n"+tt.decls+"\n", 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// p was parsed and e was not, so e is left empty.
+		s := &shallow{fset: fset, files: map[string][]*ast.File{"p": {f}}, pkgs: map[string]*types.Package{}}
+		p, _ := s.Import("p")
+		if got := complete(p); got != tt.want {
+			t.Errorf("complete(%q) = %v, want %v", tt.decls, got, tt.want)
+		}
 	}
 }
