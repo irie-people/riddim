@@ -7,7 +7,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/riddim-hq/riddim/internal/diag"
+	"github.com/irie-people/riddim/internal/diag"
 )
 
 // Lex splits a source file into tokens. Newlines become TERM tokens where they

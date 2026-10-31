@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/riddim-hq/riddim/internal/diag"
+	"github.com/irie-people/riddim/internal/diag"
 )
 
 // TestCodesCovered checks that every code the compiler emits is documented in

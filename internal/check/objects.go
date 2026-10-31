@@ -3,7 +3,7 @@ package check
 import (
 	"math/big"
 
-	"github.com/riddim-hq/riddim/internal/syntax"
+	"github.com/irie-people/riddim/internal/syntax"
 )
 
 // A TypeParam is a type parameter of a function, struct, enum or impl.

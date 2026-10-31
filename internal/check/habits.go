@@ -1,8 +1,8 @@
 package check
 
 import (
-	"github.com/riddim-hq/riddim/internal/diag"
-	"github.com/riddim-hq/riddim/internal/syntax"
+	"github.com/irie-people/riddim/internal/diag"
+	"github.com/irie-people/riddim/internal/syntax"
 )
 
 // The Rust and Go habits that need names or types to tell apart from

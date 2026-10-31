@@ -3,8 +3,8 @@ package driver
 import (
 	"testing"
 
-	"github.com/riddim-hq/riddim/internal/diag"
-	"github.com/riddim-hq/riddim/internal/gen"
+	"github.com/irie-people/riddim/internal/diag"
+	"github.com/irie-people/riddim/internal/gen"
 )
 
 // BenchmarkCheck checks a generated 10,000-line program, in one process, so

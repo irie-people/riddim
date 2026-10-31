@@ -14,8 +14,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/riddim-hq/riddim/internal/diag"
-	"github.com/riddim-hq/riddim/internal/driver"
+	"github.com/irie-people/riddim/internal/diag"
+	"github.com/irie-people/riddim/internal/driver"
 )
 
 // Version is the compiler's version.

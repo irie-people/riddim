@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/riddim-hq/riddim/internal/diag"
-	"github.com/riddim-hq/riddim/internal/emit"
-	"github.com/riddim-hq/riddim/internal/syntax"
+	"github.com/irie-people/riddim/internal/diag"
+	"github.com/irie-people/riddim/internal/emit"
+	"github.com/irie-people/riddim/internal/syntax"
 )
 
 const root = "../.."

@@ -5,7 +5,7 @@ import (
 	"sort"
 	"unicode/utf8"
 
-	"github.com/riddim-hq/riddim/internal/diag"
+	"github.com/irie-people/riddim/internal/diag"
 )
 
 // A Pos is an offset into a FileSet. Each source file occupies its own range,

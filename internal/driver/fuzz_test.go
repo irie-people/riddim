@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/riddim-hq/riddim/internal/diag"
-	"github.com/riddim-hq/riddim/internal/emit"
-	"github.com/riddim-hq/riddim/internal/syntax"
+	"github.com/irie-people/riddim/internal/diag"
+	"github.com/irie-people/riddim/internal/emit"
+	"github.com/irie-people/riddim/internal/syntax"
 )
 
 // FuzzCheck feeds arbitrary input to the lexer, parser and checker, and to

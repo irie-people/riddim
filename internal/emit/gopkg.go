@@ -5,8 +5,8 @@ import (
 	"go/types"
 	"strings"
 
-	"github.com/riddim-hq/riddim/internal/check"
-	"github.com/riddim-hq/riddim/internal/syntax"
+	"github.com/irie-people/riddim/internal/check"
+	"github.com/irie-people/riddim/internal/syntax"
 )
 
 // Go packages (DESIGN §5.3): a call converts each argument to the Go

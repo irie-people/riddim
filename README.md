@@ -36,7 +36,7 @@ fn main(sys: Sys) {
 
 **Go underneath.** Riddim compiles to readable Go: Go's speed, tooling, cross-compiling and packages.
 
-Riddim is built for [Irie](https://github.com/irie-hq/irie), which runs many coding agents side by side.
+Riddim is built for [Irie](https://github.com/irie-people/irie), which runs many coding agents side by side.
 
 ## Status
 
@@ -48,8 +48,8 @@ Early and unreleased. Nothing to install yet. The plan is [docs/DESIGN.md](docs/
 (donations, sponsorships, grants), it all goes back to the people who build it,
 after running costs, in proportion to the value of what they contributed. The
 founder started with zero Steak and earns it the same way as everyone else. The
-record is public: [riddim-hq/stake](https://github.com/riddim-hq/stake). It runs on
-[Steak](https://github.com/steak-hq/steak) v0.2.0.
+record is public: [irie-people/riddim-stake](https://github.com/irie-people/riddim-stake). It runs on
+[Steak](https://github.com/irie-people/steak) v0.2.0.
 
 ## License
 

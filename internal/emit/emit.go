@@ -11,8 +11,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/riddim-hq/riddim/internal/check"
-	"github.com/riddim-hq/riddim/internal/syntax"
+	"github.com/irie-people/riddim/internal/check"
+	"github.com/irie-people/riddim/internal/syntax"
 )
 
 //go:embed rt.go.txt

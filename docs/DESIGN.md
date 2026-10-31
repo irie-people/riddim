@@ -2,7 +2,7 @@
 
 Date: 2026-10-27. Status: v0 plan. Read with [AGENTS.md](../AGENTS.md). Every source is listed in [PROVENANCE.md](../PROVENANCE.md).
 
-Riddim is a small, statically typed language that agents write, a compiler checks and people review. It reads like a small Rust, compiles to readable Go, and calls the Go packages it is allowed to. Its first user is [Irie](https://github.com/irie-hq/irie), which runs many coding agents side by side on cloud and local models. Riddim exists to make their output cheap to verify, so that more of the work can go to small local models and more agents can run at once without a person reading every line.
+Riddim is a small, statically typed language that agents write, a compiler checks and people review. It reads like a small Rust, compiles to readable Go, and calls the Go packages it is allowed to. Its first user is [Irie](https://github.com/irie-people/irie), which runs many coding agents side by side on cloud and local models. Riddim exists to make their output cheap to verify, so that more of the work can go to small local models and more agents can run at once without a person reading every line.
 
 **Glossary.**
 - **Agent:** a coding model working through a harness (Claude Code, Codex CLI, opencode and others).
@@ -98,7 +98,7 @@ Generated Go that fails to compile is a Riddim bug: report R0900 with Go's messa
 | `testdata/` | Golden tests (§8) |
 | `examples/` | Example programs (§8) |
 
-The compiler uses Go's standard library only. Module path `github.com/riddim-hq/riddim`, `go 1.27`.
+The compiler uses Go's standard library only. Module path `github.com/irie-people/riddim`, `go 1.27`.
 
 ## 4. The language (v0)
 

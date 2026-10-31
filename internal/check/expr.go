@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/riddim-hq/riddim/internal/diag"
-	"github.com/riddim-hq/riddim/internal/gointerop"
-	"github.com/riddim-hq/riddim/internal/syntax"
+	"github.com/irie-people/riddim/internal/diag"
+	"github.com/irie-people/riddim/internal/gointerop"
+	"github.com/irie-people/riddim/internal/syntax"
 )
 
 // expr checks e where a value of type want is expected (nil when nothing is

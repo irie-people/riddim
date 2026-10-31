@@ -1,7 +1,7 @@
 # Contributing
 
 Thanks for helping. Riddim is free to use, and if it ever makes money, that
-money goes back to the people who build it: see [riddim-hq/stake](https://github.com/riddim-hq/stake).
+money goes back to the people who build it: see [irie-people/riddim-stake](https://github.com/irie-people/riddim-stake).
 
 1. For anything bigger than a small fix, open an issue and agree the approach first.
 2. Sign off your commits (`git commit -s`). That certifies the

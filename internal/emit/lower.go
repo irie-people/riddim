@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/riddim-hq/riddim/internal/check"
-	"github.com/riddim-hq/riddim/internal/syntax"
+	"github.com/irie-people/riddim/internal/check"
+	"github.com/irie-people/riddim/internal/syntax"
 )
 
 // A fn lowers one Go function: a Riddim function or method, with the

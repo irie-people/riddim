@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/riddim-hq/riddim/internal/diag"
+	"github.com/irie-people/riddim/internal/diag"
 )
 
 // The Rust and Go habits that show in the syntax (DESIGN §7.2). Each gets its

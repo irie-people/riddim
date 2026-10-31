@@ -20,7 +20,7 @@ Write every commit subject and pull request title as a [Conventional Commit](htt
 
 ## Stake
 
-Contributions earn Steak under [riddim-hq/stake](https://github.com/riddim-hq/stake). Agree anything sizeable in an issue first, and say when an agent wrote part of a change.
+Contributions earn Steak under [irie-people/riddim-stake](https://github.com/irie-people/riddim-stake). Agree anything sizeable in an issue first, and say when an agent wrote part of a change.
 
 ## Stack
 

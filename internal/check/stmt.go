@@ -3,8 +3,8 @@ package check
 import (
 	"fmt"
 
-	"github.com/riddim-hq/riddim/internal/diag"
-	"github.com/riddim-hq/riddim/internal/syntax"
+	"github.com/irie-people/riddim/internal/diag"
+	"github.com/irie-people/riddim/internal/syntax"
 )
 
 // block checks a block. Its value is that of its last statement when that is

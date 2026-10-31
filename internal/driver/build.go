@@ -14,9 +14,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/riddim-hq/riddim/internal/diag"
-	"github.com/riddim-hq/riddim/internal/emit"
-	"github.com/riddim-hq/riddim/internal/syntax"
+	"github.com/irie-people/riddim/internal/diag"
+	"github.com/irie-people/riddim/internal/emit"
+	"github.com/irie-people/riddim/internal/syntax"
 )
 
 // GoMod is the go.mod written next to the generated Go.

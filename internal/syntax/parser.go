@@ -5,7 +5,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/riddim-hq/riddim/internal/diag"
+	"github.com/irie-people/riddim/internal/diag"
 )
 
 // Parse lexes and parses one source file. It reports every independent

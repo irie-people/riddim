@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/riddim-hq/riddim/internal/diag"
-	"github.com/riddim-hq/riddim/internal/syntax"
+	"github.com/irie-people/riddim/internal/diag"
+	"github.com/irie-people/riddim/internal/syntax"
 )
 
 func checkSrc(t *testing.T, src string) []diag.Diagnostic {

@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/riddim-hq/riddim/internal/syntax"
+	"github.com/irie-people/riddim/internal/syntax"
 )
 
 // Constant expressions (literals, constants and operators on them) become Go

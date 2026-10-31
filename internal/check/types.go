@@ -5,7 +5,7 @@ package check
 import (
 	"strings"
 
-	"github.com/riddim-hq/riddim/internal/syntax"
+	"github.com/irie-people/riddim/internal/syntax"
 )
 
 // A Type is a Riddim type.

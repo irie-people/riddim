@@ -1,6 +1,6 @@
 # Steak automation for the code repo. No LLM calls unless the STEAK_MODEL variable names an Ollama model,
 # which then runs on the runner itself. Never checks out pull-request code.
-#   secret STAKE_TOKEN: fine-grained token with contents + pull requests write on riddim-hq/stake
+#   secret STAKE_TOKEN: fine-grained token with contents + pull requests write on irie-people/riddim-stake
 #   variable STEAK_MODEL (optional): e.g. a 1-3B instruct model; empty = deterministic heuristic
 name: steak
 on:
@@ -14,7 +14,7 @@ permissions:
 concurrency:
   group: steak-${{ github.event.pull_request.number || 'setup' }}
 env:
-  STAKE_REPO: "riddim-hq/stake"
+  STAKE_REPO: "irie-people/riddim-stake"
   REPO: ${{ github.repository }}
   N: ${{ github.event.pull_request.number }}
   GH_TOKEN: ${{ github.token }}

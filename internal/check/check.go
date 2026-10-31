@@ -5,8 +5,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/riddim-hq/riddim/internal/diag"
-	"github.com/riddim-hq/riddim/internal/syntax"
+	"github.com/irie-people/riddim/internal/diag"
+	"github.com/irie-people/riddim/internal/syntax"
 )
 
 // Check checks a parsed program. It reports the errors of the first stage

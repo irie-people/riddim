@@ -4,8 +4,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/riddim-hq/riddim/internal/check"
-	"github.com/riddim-hq/riddim/internal/syntax"
+	"github.com/irie-people/riddim/internal/check"
+	"github.com/irie-people/riddim/internal/syntax"
 )
 
 // A match lowers to an if / else if chain that tests the arms in order. The

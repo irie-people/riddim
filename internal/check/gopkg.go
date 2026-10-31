@@ -8,8 +8,8 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/riddim-hq/riddim/internal/gointerop"
-	"github.com/riddim-hq/riddim/internal/syntax"
+	"github.com/irie-people/riddim/internal/gointerop"
+	"github.com/irie-people/riddim/internal/syntax"
 )
 
 // Go packages (DESIGN §5.3). `use go "strings"` makes the package's name a

@@ -70,6 +70,6 @@ These shaped the design but were not re-read for it. A build session that relies
 
 | Module | Version | License | Why |
 |---|---|---|---|
-| Steak framework templates (https://github.com/steak-hq/steak, `templates/project`) | 0.2.0 | MIT | Copied: `.github/conventional-commit.sh`, `.github/workflows/commits.yml` and `.github/workflows/release-please.yml` |
+| Steak framework templates (https://github.com/irie-people/steak, `templates/project`) | 0.2.0 | MIT | Copied: `.github/conventional-commit.sh`, `.github/workflows/commits.yml` and `.github/workflows/release-please.yml` |
 | googleapis/release-please-action | v4 | Apache-2.0 | Run by `release-please.yml` on GitHub's runners; nothing copied |
 | actions/checkout | v4 | MIT | Run by `commits.yml` on GitHub's runners; nothing copied |

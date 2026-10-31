@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/riddim-hq/riddim/internal/syntax"
+	"github.com/irie-people/riddim/internal/syntax"
 )
 
 // pat checks pattern p against a value of type t, binding names through b.

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/riddim-hq/riddim/internal/gen"
+	"github.com/irie-people/riddim/internal/gen"
 )
 
 // TestCheckSpeed is the speed check of milestone M4: `riddim check` on a

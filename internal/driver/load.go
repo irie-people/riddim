@@ -9,9 +9,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/riddim-hq/riddim/internal/check"
-	"github.com/riddim-hq/riddim/internal/diag"
-	"github.com/riddim-hq/riddim/internal/syntax"
+	"github.com/irie-people/riddim/internal/check"
+	"github.com/irie-people/riddim/internal/diag"
+	"github.com/irie-people/riddim/internal/syntax"
 )
 
 // A Unit is one program: the .rdm files of a directory.

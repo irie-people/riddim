@@ -1,6 +1,6 @@
 package syntax
 
-import "github.com/riddim-hq/riddim/internal/diag"
+import "github.com/irie-people/riddim/internal/diag"
 
 // A Node is any syntax tree node.
 type Node interface{ Span() Span }

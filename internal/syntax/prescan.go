@@ -3,7 +3,7 @@ package syntax
 import (
 	"strings"
 
-	"github.com/riddim-hq/riddim/internal/diag"
+	"github.com/irie-people/riddim/internal/diag"
 )
 
 // The token pre-scan finds the Rust and Go habits that the tokens alone show
