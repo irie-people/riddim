@@ -39,7 +39,7 @@ jobs:
       - name: Suggest a size
         env: { STEAK_MODEL: "${{ vars.STEAK_MODEL }}" }
         run: |
-          gh pr diff "$N" --repo "$REPO" > pr.diff
+          gh pr diff "$N" --repo "$REPO" --allow-escape-sequences > pr.diff
           s=$(bun stake/tools/steak.ts suggest --diff pr.diff)
           body="<!-- steak-suggest -->
           $s
