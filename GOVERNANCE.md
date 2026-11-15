@@ -35,6 +35,18 @@ Any maintainer can propose, in a public issue, a contributor who has a record of
 
 The maintainers are the Community Moderators named in the [Code of Conduct](CODE_OF_CONDUCT.md). A maintainer involved in a report takes no part in deciding it.
 
+## Bans
+
+A ban can't stop anyone running Riddim: its code stays free for everyone under its [Apache 2.0 license](LICENSE). What a ban does is keep someone out of everything else Irie People runs.
+
+- **Who is banned:** anyone named on the US, UN or EU sanctions lists (a person or group, never a whole country); anyone shown to use Riddim to defraud people, spread malware, spy on people or harass them; and anyone the Code of Conduct's process bans.
+- **Who decides:** the maintainers. Unlike other decisions, bans are decided in private, to protect everyone's privacy, and a maintainer involved takes no part.
+- **What happens:** a ban starts at once. The person is told why and may answer within 14 days; the maintainers then confirm the ban or lift it.
+- **What it covers:** Irie People's repositories, issues, pull requests, discussions and chat. None of their changes is merged, so they earn no Steak, and they get no support or review.
+- **Beyond Irie People:** maintainers may report misuse to the model provider whose account was used, to GitHub, or to the police.
+- **Privacy:** the list of bans stays private. Only this rule is public.
+- **Lifting a ban:** a sanctions ban lasts while the person is listed, and a Code of Conduct ban as long as that process says. Any other ban can be lifted after a year, when a maintainer proposes it and no other maintainer objects within 14 days.
+
 ## Changing this document
 
 A change to how decisions are made stays open as a pull request for at least 14 days, and needs the approval of a majority of maintainers.

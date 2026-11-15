@@ -62,6 +62,7 @@ Riddim is written from public documentation and public open-source projects. Eve
 | 2026-11-01 | https://github.com/irie-people/irie/blob/main/CODE_OF_CONDUCT.md (Irie's adapted Contributor Covenant 3.0, https://www.contributor-covenant.org/version/3/0/, stewarded by the Organization for Ethical Source; CC BY-SA 4.0) | The text of `CODE_OF_CONDUCT.md`: Irie's copy, with the project's name changed |
 | 2026-11-01 | https://docs.oscollective.org/interested-in-joining-osc/acceptance-criteria ; https://docs.oscollective.org/for-hosted-member-projects/governance-and-mediation | What a fiscal host looks for in a project's governance: a clear way to make decisions that survives a change of leadership, two or more admins, contributing guidelines and a code of conduct. The topics of `GOVERNANCE.md`, written to match Irie's |
 | 2026-11-15 | https://cli.github.com/manual/gh_pr_diff | `steak.yml`: `--allow-escape-sequences`, so the size bot reads a diff that holds terminal escape codes |
+| 2026-11-15 | https://github.com/irie-people/irie/blob/main/GOVERNANCE.md (its Bans section; Apache-2.0, the same project family) ; https://docs.github.com/en/communities/maintaining-your-safety-on-github/blocking-a-user-from-your-organization ; https://www.contributor-covenant.org/faq/ ; https://www.anthropic.com/legal/aup | GOVERNANCE.md's Bans section, the rule Irie has: what a ban covers, who decides, and where misuse is reported |
 
 ### Ideas from prior knowledge
 
