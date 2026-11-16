@@ -254,9 +254,11 @@ td { color: var(--ink-soft); }
 .dot.irie { background: #1E5A42; }
 .dot.riddim { background: #1F1F24; box-shadow: inset 0 -0.25rem 0 #F2B544; }
 .dot.steak { background: #7A2E1F; }
+.dot.roots { background: #1C2620; box-shadow: inset 0 -0.25rem 0 #9CC5A1; }
 
 @media (prefers-color-scheme: dark) {
   .dot.riddim { background: #34343C; }
+  .dot.roots { background: #34443A; }
 }
 
 @media (max-width: 40rem) {

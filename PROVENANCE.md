@@ -63,6 +63,7 @@ Riddim is written from public documentation and public open-source projects. Eve
 | 2026-11-01 | https://docs.oscollective.org/interested-in-joining-osc/acceptance-criteria ; https://docs.oscollective.org/for-hosted-member-projects/governance-and-mediation | What a fiscal host looks for in a project's governance: a clear way to make decisions that survives a change of leadership, two or more admins, contributing guidelines and a code of conduct. The topics of `GOVERNANCE.md`, written to match Irie's |
 | 2026-11-15 | https://cli.github.com/manual/gh_pr_diff | `steak.yml`: `--allow-escape-sequences`, so the size bot reads a diff that holds terminal escape codes |
 | 2026-11-15 | https://github.com/irie-people/irie/blob/main/GOVERNANCE.md (its Bans section; Apache-2.0, the same project family) ; https://docs.github.com/en/communities/maintaining-your-safety-on-github/blocking-a-user-from-your-organization ; https://www.contributor-covenant.org/faq/ ; https://www.anthropic.com/legal/aup | GOVERNANCE.md's Bans section, the rule Irie has: what a ban covers, who decides, and where misuse is reported |
+| 2026-11-16 | https://github.com/irie-people/roots (`site/icon.svg`, Roots' mark; Apache-2.0, the same project family) ; https://irie-people.github.io/roots/ | The link to Roots' site at the foot of `site/index.html`, and `.dot.roots` in `site/style.css` in its mark's colours, the same as the other irie-people sites |
 
 ### Ideas from prior knowledge
 
